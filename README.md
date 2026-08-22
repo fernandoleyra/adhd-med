@@ -114,8 +114,16 @@ To host the AI DJ for everyone, three environment variables, all read by
 | | |
 |---|---|
 | `OPENROUTER_API_KEY` | required. Without it the route answers 501 and the app quietly uses the scripted DJ. |
-| `DJ_MODEL` | pins one model, in OpenRouter's `vendor/model` naming (e.g. `nvidia/nemotron-3.5-lightning`). Whatever a visitor's browser asks for, this answers — the deployment pays, so the deployment chooses. |
+| `DJ_MODEL` | pins one model, in OpenRouter's `vendor/model` naming (e.g. `z-ai/glm-5.2:free`). Whatever a visitor's browser asks for, this answers — the deployment pays, so the deployment chooses. |
 | `DJ_MODELS` | comma-separated allow-list a visitor may pick from, replacing the four built-in defaults. Ignored when `DJ_MODEL` is set. |
+
+Picking a free one: of OpenRouter's ~22 free models only a handful can return a
+strict JSON schema, which this app needs. `z-ai/glm-5.2:free` and
+`nvidia/nemotron-3-super-120b-a12b:free` both can, and both are large enough to
+follow the band rules; `openrouter/free` routes to whatever is up, so its
+sessions vary in style. Free models are all reasoning models, and OpenRouter
+spends reasoning tokens out of `max_tokens` — which is why the DJ asks for 4000
+of them and sends `reasoning: {effort: 'low'}`.
 
 Worth knowing before you pick: OpenRouter's own **allowed providers** and **data
 policy** settings can refuse every model here. A narrowed provider list rules

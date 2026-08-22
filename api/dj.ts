@@ -32,10 +32,13 @@ const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
  * set. Neither one means the four defaults below.
  */
 const DEFAULT_MODELS = [
+  // Free and able to hold a JSON schema, which is a short list. Paid ids work
+  // too — name them in DJ_MODEL or DJ_MODELS.
+  'z-ai/glm-5.2:free',
+  'nvidia/nemotron-3-super-120b-a12b:free',
   'openrouter/free',
   'google/gemini-2.5-flash',
   'anthropic/claude-sonnet-4.6',
-  'openai/gpt-5.2',
 ];
 
 /** Read per request, so a test can vary it and an env change needs no code. */
@@ -49,7 +52,12 @@ function allowedModels(): Set<string> {
 }
 
 const MAX_BODY_BYTES = 16_000;
-const MAX_TOKENS = 2000;
+/**
+ * A ceiling on what one request can spend, not a target. It has to clear the
+ * reasoning tokens a thinking model burns before it writes any JSON — the app
+ * asks for 4000 and a session is well under a thousand of them.
+ */
+const MAX_TOKENS = 6000;
 const RATE_LIMIT = 20;
 const WINDOW_MS = 3_600_000;
 
@@ -89,7 +97,14 @@ export default async function handler(request: Request): Promise<Response> {
   const raw = await request.text();
   if (raw.length > MAX_BODY_BYTES) return json({ error: 'request too large' }, 413);
 
-  let body: { model?: unknown; messages?: unknown; max_tokens?: unknown; temperature?: unknown; response_format?: unknown };
+  let body: {
+    model?: unknown;
+    messages?: unknown;
+    max_tokens?: unknown;
+    temperature?: unknown;
+    response_format?: unknown;
+    reasoning?: unknown;
+  };
   try {
     body = JSON.parse(raw);
   } catch {
@@ -124,6 +139,9 @@ export default async function handler(request: Request): Promise<Response> {
         temperature: typeof body.temperature === 'number' ? body.temperature : undefined,
         messages: body.messages,
         response_format: body.response_format,
+        // Passed through rather than dropped: this is how the app keeps a
+        // reasoning model from spending the whole budget thinking.
+        reasoning: body.reasoning,
       }),
     });
   } catch {

@@ -37,14 +37,15 @@ export interface State {
 const KEY = 'adhdmed.v1';
 
 /**
- * A short list from OpenRouter's catalogue. Any of its model ids works — the
- * settings field takes a typed one too.
+ * A short list from OpenRouter's catalogue, free first: this app is free, so its
+ * default DJ should be too. Every id here can return a schema-checked answer,
+ * which most free models cannot. The field takes any typed id.
  */
 export const MODELS = [
-  { id: 'openrouter/free', label: 'Free', note: 'no cost, auto-routed' },
-  { id: 'google/gemini-2.5-flash', label: 'Flash', note: 'fast, pennies' },
-  { id: 'anthropic/claude-sonnet-4.6', label: 'Sonnet', note: 'best sessions' },
-  { id: 'openai/gpt-5.2', label: 'GPT', note: 'alternative' },
+  { id: 'z-ai/glm-5.2:free', label: 'GLM', note: 'free · holds the schema' },
+  { id: 'nvidia/nemotron-3-super-120b-a12b:free', label: 'Nemotron', note: 'free · 120B' },
+  { id: 'openrouter/free', label: 'Auto', note: 'free · whichever is up' },
+  { id: 'anthropic/claude-sonnet-4.6', label: 'Sonnet', note: 'paid · best sessions' },
 ];
 
 const DEFAULTS: State = {
@@ -56,7 +57,7 @@ const DEFAULTS: State = {
     seenLeaflet: false,
     experimental: false,
     apiKey: '',
-    model: 'openrouter/free',
+    model: 'z-ai/glm-5.2:free',
     proxyUrl: '',
     wakeLock: false,
     djPath: 'quick',

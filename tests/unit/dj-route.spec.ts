@@ -74,11 +74,11 @@ describe('the hosted DJ route', () => {
 
   // The point of DJ_MODEL: the deployment pays, so the deployment chooses.
   it('DJ_MODEL answers whatever the browser asked for', async () => {
-    process.env.DJ_MODEL = 'nvidia/nemotron-nano-9b-v2';
+    process.env.DJ_MODEL = 'nvidia/nemotron-nano-9b-v2:free';
     const calls = stubUpstream();
     const res = await handler(ask('openrouter/free'));
     expect(res.status).toBe(200);
-    expect(calls[0]!.body.model).toBe('nvidia/nemotron-nano-9b-v2');
+    expect(calls[0]!.body.model).toBe('nvidia/nemotron-nano-9b-v2:free');
   });
 
   it('DJ_MODEL needs no place on the allow-list', async () => {
@@ -105,7 +105,26 @@ describe('the hosted DJ route', () => {
       body: JSON.stringify({ model: 'openrouter/free', max_tokens: 999_999, messages: [{ role: 'user', content: 'hi' }] }),
     });
     await handler(req);
-    expect(calls[0]!.body.max_tokens).toBe(2000);
+    expect(calls[0]!.body.max_tokens).toBe(6000);
+  });
+
+  // Every free model on OpenRouter is a reasoning model, and reasoning tokens
+  // come out of max_tokens. Dropping this field is how a working DJ returns an
+  // empty answer.
+  it('forwards the reasoning control instead of dropping it', async () => {
+    const calls = stubUpstream();
+    const req = new Request('https://example.test/api/dj', {
+      method: 'POST',
+      body: JSON.stringify({
+        model: 'openrouter/free',
+        max_tokens: 4000,
+        reasoning: { effort: 'low' },
+        messages: [{ role: 'user', content: 'hi' }],
+      }),
+    });
+    await handler(req);
+    expect(calls[0]!.body.reasoning).toEqual({ effort: 'low' });
+    expect(calls[0]!.body.max_tokens).toBe(4000);
   });
 
   // The client tells these three apart, and behaves differently for each: 501
