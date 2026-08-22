@@ -149,6 +149,11 @@ function describeError(status: number, body: string): AiError {
   // The hosted route only forwards a short allow-list; your own key has no such
   // limit, so say which door to use rather than just refusing.
   if (lower.includes('model not allowed')) return new AiError('That model needs your own key', 'model');
+  // OpenRouter's own guardrails — allowed providers, or the data policy that
+  // gates the free endpoints. Nothing is broken; an account setting says no.
+  if (lower.includes('settings/privacy') || lower.includes('no endpoints available') || lower.includes('allowed providers')) {
+    return new AiError('OpenRouter settings block that model', 'model');
+  }
   if (status === 404 || lower.includes('not a valid model')) return new AiError('That model is not available', 'model');
   if (status >= 500) return new AiError('The DJ service is having trouble', 'network');
   return new AiError(`Request failed (${status})`, 'network');
