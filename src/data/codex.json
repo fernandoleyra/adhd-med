@@ -1,0 +1,446 @@
+{
+  "tiers": {
+    "measured": "A quantity someone measured, or a definition. The number is checkable; the octave shift is arithmetic.",
+    "protocol": "A procedure with a rationale — how to move through frequencies, not a claim about any single one.",
+    "lore": "Beautiful, old, and unproven. The arithmetic is real; the meaning is poetry. Kept, and labelled."
+  },
+  "entries": [
+    {
+      "id": "delta",
+      "name": "Delta",
+      "tier": "measured",
+      "kind": "band",
+      "value": 2,
+      "unit": "Hz",
+      "note": "0.5–4 Hz. Dominant in deep sleep. Slow enough that you feel it as pulsing rather than pitch.",
+      "source": "EEG band convention"
+    },
+    {
+      "id": "theta",
+      "name": "Theta",
+      "tier": "measured",
+      "kind": "band",
+      "value": 6,
+      "unit": "Hz",
+      "note": "4–8 Hz. Drowsiness, light meditation, inward attention. Raised resting theta is the most replicated EEG finding in ADHD, which is why focus sessions here avoid it.",
+      "source": "EEG band convention · theta/beta ratio literature"
+    },
+    {
+      "id": "alpha",
+      "name": "Alpha",
+      "tier": "measured",
+      "kind": "band",
+      "value": 10,
+      "unit": "Hz",
+      "note": "8–12 Hz. The idle rhythm of relaxed alertness — it rises when you close your eyes.",
+      "source": "Berger 1929; EEG band convention"
+    },
+    {
+      "id": "smr",
+      "name": "SMR",
+      "tier": "measured",
+      "kind": "band",
+      "value": 13.5,
+      "unit": "Hz",
+      "note": "12–15 Hz sensorimotor rhythm: still body, alert mind. The band ADHD neurofeedback protocols try to raise. Folds to 216 Hz — an octave below the 432 the lore tier is fond of, which is a coincidence and nothing more.",
+      "source": "Sterman; SMR neurofeedback literature"
+    },
+    {
+      "id": "beta",
+      "name": "Beta",
+      "tier": "measured",
+      "kind": "band",
+      "value": 18,
+      "unit": "Hz",
+      "note": "15–30 Hz. Active thinking, judgement, single-task effort. The working band of every focus arc here.",
+      "source": "EEG band convention"
+    },
+    {
+      "id": "gamma40",
+      "name": "Gamma 40",
+      "tier": "measured",
+      "kind": "band",
+      "value": 40,
+      "unit": "Hz",
+      "note": "The frequency the MIT sensory-entrainment work is built on. Studied for dementia, not for ADHD — but 40 Hz binaural beats have also narrowed attentional focus in lab tasks.",
+      "source": "Iaccarino et al. 2016; Colzato et al. 2017"
+    },
+    {
+      "id": "schumann",
+      "name": "Schumann resonance",
+      "tier": "measured",
+      "kind": "frequency",
+      "value": 7.83,
+      "unit": "Hz",
+      "note": "The fundamental standing wave in the cavity between the Earth's surface and the ionosphere, excited by lightning. Genuinely measured, genuinely 7.83 Hz, and it happens to sit in theta.",
+      "source": "Schumann 1952; ELF observation"
+    },
+    {
+      "id": "schumann2",
+      "name": "Schumann II",
+      "tier": "measured",
+      "kind": "frequency",
+      "value": 14.3,
+      "unit": "Hz",
+      "note": "The second mode of the same cavity. Lands inside SMR.",
+      "source": "ELF observation"
+    },
+    {
+      "id": "earth-day",
+      "name": "Earth day",
+      "tier": "measured",
+      "kind": "period",
+      "value": 86400,
+      "unit": "s",
+      "note": "One rotation, raised twenty-four octaves. The period is a fact; hearing it is arithmetic.",
+      "source": "SI day · Cousto's cosmic octave method"
+    },
+    {
+      "id": "earth-year",
+      "name": "Earth year",
+      "tier": "measured",
+      "kind": "period",
+      "value": 31556925.97,
+      "unit": "s",
+      "note": "One tropical orbit, raised thirty-two octaves. The 136.10 Hz result is the tone Cousto matched to a tuning fork and called OM.",
+      "source": "Tropical year · Cousto"
+    },
+    {
+      "id": "caesium",
+      "name": "The second",
+      "tier": "measured",
+      "kind": "frequency",
+      "value": 9192631770,
+      "unit": "Hz",
+      "note": "The caesium-133 hyperfine transition. Since 1967 this number does not measure the second — it defines it. Lowered twenty-six octaves, it is a listenable tone.",
+      "source": "SI definition of the second"
+    },
+    {
+      "id": "hydrogen",
+      "name": "Hydrogen line",
+      "tier": "measured",
+      "kind": "frequency",
+      "value": 1420405751.768,
+      "unit": "Hz",
+      "note": "The 21 cm spin-flip of neutral hydrogen — the most abundant note in the universe, and the channel radio astronomy listens on.",
+      "source": "21 cm line"
+    },
+    {
+      "id": "cmb",
+      "name": "Cosmic microwave background",
+      "tier": "measured",
+      "kind": "frequency",
+      "value": 160230000000,
+      "unit": "Hz",
+      "note": "The spectral peak of the oldest light there is, 2.725 K of blackbody radiation. Lowered thirty octaves it becomes a mid-range hum.",
+      "source": "COBE/FIRAS blackbody peak"
+    },
+    {
+      "id": "heartbeat",
+      "name": "Resting heartbeat",
+      "tier": "measured",
+      "kind": "frequency",
+      "value": 1,
+      "unit": "Hz",
+      "note": "Sixty beats a minute is exactly one hertz, and one hertz raised seven octaves is 128 Hz. The body already keeps time in this system.",
+      "source": "physiology"
+    },
+    {
+      "id": "concert-a",
+      "name": "A = 440",
+      "tier": "measured",
+      "kind": "frequency",
+      "value": 440,
+      "unit": "Hz",
+      "note": "Concert pitch by international agreement (ISO 16). A convention, not a discovery — which is exactly what the 432 believers get right and then over-read.",
+      "source": "ISO 16:1975"
+    },
+    {
+      "id": "onset",
+      "name": "Onset dose",
+      "tier": "protocol",
+      "kind": "protocol",
+      "note": "Start the sound before the work, not with it. In the 2019 meta-analysis, exposure before and during a task beat exposure during it alone. Every arc in this app opens with a ramp for that reason.",
+      "source": "García-Argibay, Santed & Reales 2019",
+      "stages": [
+        { "label": "onset", "beat": 10, "beatTo": 14, "carrier": 220, "minutes": 3, "why": "climb from alpha into SMR before the task begins" },
+        { "label": "hold", "beat": 16, "carrier": 240, "minutes": 12, "why": "low beta, sustained" }
+      ]
+    },
+    {
+      "id": "smr-uptrain",
+      "name": "SMR up-train",
+      "tier": "protocol",
+      "kind": "protocol",
+      "note": "A slow sweep across the sensorimotor band, in the direction ADHD neurofeedback rewards. Neurofeedback trains your own rhythm; a beat only offers one. Not the same thing, and the difference matters.",
+      "source": "SMR neurofeedback protocols",
+      "stages": [
+        { "label": "sweep", "beat": 12, "beatTo": 15, "carrier": 220, "minutes": 20, "why": "12 → 15 Hz across the band" }
+      ]
+    },
+    {
+      "id": "anxiolytic",
+      "name": "Anxiolytic descent",
+      "tier": "protocol",
+      "kind": "protocol",
+      "note": "Alpha down into theta and delta, where the meta-analysis found its largest effect (g ≈ 0.69, for anxiety). The clearest thing binaural beats have been shown to do is help people feel calmer.",
+      "source": "García-Argibay et al. 2019",
+      "stages": [
+        { "label": "alpha", "beat": 10, "carrier": 180, "minutes": 4, "why": "meet the state you are in" },
+        { "label": "descend", "beat": 8, "beatTo": 6, "carrier": 160, "minutes": 6, "why": "into theta" },
+        { "label": "settle", "beat": 4, "carrier": 140, "minutes": 5, "noise": 0.16, "why": "theta/delta border, pink bed" }
+      ]
+    },
+    {
+      "id": "pomodoro",
+      "name": "Pomodoro",
+      "tier": "protocol",
+      "kind": "protocol",
+      "note": "Twenty-five minutes of work, then stop. The protocol is the timer, not the tone; the sound just marks the shape so the ending arrives as a change in the room.",
+      "source": "Cirillo, time-boxing",
+      "stages": [
+        { "label": "onset", "beat": 10, "beatTo": 14, "carrier": 220, "minutes": 3, "why": "pre-task ramp" },
+        { "label": "work", "beat": 16, "carrier": 240, "minutes": 20, "why": "the block" },
+        { "label": "stop", "beat": 10, "carrier": 200, "minutes": 2, "why": "an audible edge to stop at" }
+      ]
+    },
+    {
+      "id": "coherent-breathing",
+      "name": "Coherent breathing",
+      "tier": "protocol",
+      "kind": "frequency",
+      "value": 0.1,
+      "unit": "Hz",
+      "note": "Six breaths a minute — 0.1 Hz — is the rate that maximises heart-rate variability, a well-replicated result. Here it drives an amplitude swell you can breathe with, not a beat you could hear.",
+      "source": "HRV resonance-frequency breathing literature",
+      "stages": [
+        { "label": "breathe", "beat": 8, "carrier": 160, "minutes": 10, "am": { "rate": 0.1, "depth": 0.5 }, "why": "the tone swells and fades at six cycles a minute — follow it" }
+      ]
+    },
+    {
+      "id": "focus-10",
+      "name": "Focus 10",
+      "tier": "protocol",
+      "kind": "protocol",
+      "note": "Hemi-Sync's first named level: \"mind awake, body asleep\". Carrier around 100 Hz, a delta-to-theta beat, pink noise over the top. The 1983 CIA assessment of the Gateway Process describes the mechanism as hemispheric synchronisation via the frequency-following response.",
+      "source": "Monroe Institute; McDonnell 1983 (CIA-RDP96-00788R001700210024-6)",
+      "stages": [
+        { "label": "entry", "beat": 10, "beatTo": 7, "carrier": 100, "minutes": 5, "noise": 0.2, "why": "alpha down toward theta" },
+        { "label": "focus 10", "beat": 4, "carrier": 100, "minutes": 15, "noise": 0.22, "why": "delta beat, body asleep, mind awake" }
+      ]
+    },
+    {
+      "id": "focus-12",
+      "name": "Focus 12",
+      "tier": "protocol",
+      "kind": "protocol",
+      "note": "The next rung: \"expanded awareness\". Wider stereo, brighter carrier, theta beat.",
+      "source": "Monroe Institute",
+      "stages": [
+        { "label": "focus 12", "beat": 8, "carrier": 200, "minutes": 18, "noise": 0.18, "why": "theta plateau, wide field" }
+      ]
+    },
+    {
+      "id": "focus-15",
+      "name": "Focus 15",
+      "tier": "protocol",
+      "kind": "protocol",
+      "note": "\"No time.\" A long flat theta/delta plateau with nothing to mark the minutes.",
+      "source": "Monroe Institute",
+      "stages": [
+        { "label": "focus 15", "beat": 4, "carrier": 150, "minutes": 25, "noise": 0.2, "why": "flat plateau — no cues, no clock" }
+      ]
+    },
+    {
+      "id": "genus",
+      "name": "GENUS 40 Hz",
+      "tier": "protocol",
+      "kind": "protocol",
+      "note": "Gamma ENtrainment Using Sensory Stimulation: 40 Hz clicks, an hour a day, from the MIT work on Alzheimer's models and the human trials that followed. Isochronic here, because the trials used pulses, not binaural illusions. Nothing to do with ADHD — kept because it is the strongest evidence that sound at a frequency changes a brain at all.",
+      "source": "Iaccarino et al. 2016; Martorell et al. 2019; Cognito phase II",
+      "stages": [
+        { "label": "40 Hz", "beat": 40, "carrier": 320, "minutes": 20, "method": "isochronic", "why": "pulsed at 40 Hz, as in the trials" }
+      ]
+    },
+    {
+      "id": "mercury",
+      "name": "Mercury",
+      "tier": "lore",
+      "kind": "period",
+      "value": 7600530,
+      "unit": "s",
+      "note": "87.97 days, raised thirty octaves. Cousto's cosmic octave: real orbital mechanics, then a leap to meaning that nothing supports.",
+      "source": "Cousto, The Cosmic Octave"
+    },
+    {
+      "id": "venus",
+      "name": "Venus",
+      "tier": "lore",
+      "kind": "period",
+      "value": 19414166,
+      "unit": "s",
+      "note": "224.70 days, thirty-two octaves up.",
+      "source": "Cousto, The Cosmic Octave"
+    },
+    {
+      "id": "mars",
+      "name": "Mars",
+      "tier": "lore",
+      "kind": "period",
+      "value": 59355072,
+      "unit": "s",
+      "note": "686.98 days, thirty-three octaves up.",
+      "source": "Cousto, The Cosmic Octave"
+    },
+    {
+      "id": "jupiter",
+      "name": "Jupiter",
+      "tier": "lore",
+      "kind": "period",
+      "value": 374335690,
+      "unit": "s",
+      "note": "11.86 years, thirty-six octaves up.",
+      "source": "Cousto, The Cosmic Octave"
+    },
+    {
+      "id": "saturn",
+      "name": "Saturn",
+      "tier": "lore",
+      "kind": "period",
+      "value": 929596608,
+      "unit": "s",
+      "note": "29.45 years, thirty-seven octaves up.",
+      "source": "Cousto, The Cosmic Octave"
+    },
+    {
+      "id": "moon",
+      "name": "Moon",
+      "tier": "lore",
+      "kind": "period",
+      "value": 2551443,
+      "unit": "s",
+      "note": "The synodic month, 29.53 days — new moon to new moon. Twenty-nine octaves up.",
+      "source": "Cousto, The Cosmic Octave"
+    },
+    {
+      "id": "platonic-year",
+      "name": "Platonic year",
+      "tier": "lore",
+      "kind": "period",
+      "value": 817956000000,
+      "unit": "s",
+      "note": "25,920 years: one full precession of the equinoxes, forty-seven octaves up. The longest number in the catalogue.",
+      "source": "Cousto; precessional cycle"
+    },
+    {
+      "id": "a432",
+      "name": "A = 432",
+      "tier": "lore",
+      "kind": "frequency",
+      "value": 432,
+      "unit": "Hz",
+      "note": "A rival concert pitch with a devoted following and no evidence of any special effect. It is a nice number — 432 = 2⁴·3³ — and that is the whole case.",
+      "source": "tuning debate"
+    },
+    {
+      "id": "solfeggio-174",
+      "name": "Solfeggio 174",
+      "tier": "lore",
+      "kind": "frequency",
+      "value": 174,
+      "unit": "Hz",
+      "note": "The lowest of the nine. The set was assembled in the 1970s from a numerological reading of a Latin hymn; it is not medieval, and no clinical claim survives contact with a control group.",
+      "source": "Puleo & Horowitz"
+    },
+    {
+      "id": "solfeggio-396",
+      "name": "Solfeggio 396",
+      "tier": "lore",
+      "kind": "frequency",
+      "value": 396,
+      "unit": "Hz",
+      "note": "\"Liberation from fear\", per the tradition. A pleasant low tone, and the digits sum to 9, like every number in the set — which is the actual pattern.",
+      "source": "Puleo & Horowitz"
+    },
+    {
+      "id": "solfeggio-528",
+      "name": "Solfeggio 528",
+      "tier": "lore",
+      "kind": "frequency",
+      "value": 528,
+      "unit": "Hz",
+      "note": "The famous one, sold as the \"DNA repair\" frequency. There is no such mechanism. It is still a good C-ish tone to build a drone on.",
+      "source": "Puleo & Horowitz"
+    },
+    {
+      "id": "solfeggio-639",
+      "name": "Solfeggio 639",
+      "tier": "lore",
+      "kind": "frequency",
+      "value": 639,
+      "unit": "Hz",
+      "note": "Digits sum to 9. Everything in this family does.",
+      "source": "Puleo & Horowitz"
+    },
+    {
+      "id": "solfeggio-963",
+      "name": "Solfeggio 963",
+      "tier": "lore",
+      "kind": "frequency",
+      "value": 963,
+      "unit": "Hz",
+      "note": "The top of the set, folded down an octave to sit in range.",
+      "source": "Puleo & Horowitz"
+    },
+    {
+      "id": "pi",
+      "name": "Pi",
+      "tier": "lore",
+      "kind": "number",
+      "value": 3.14159265,
+      "unit": "",
+      "note": "π scaled by a hundred: 314.16 Hz. A pure numeral with no dimensions, so calling it a frequency is a choice, not a measurement.",
+      "source": "arithmetic"
+    },
+    {
+      "id": "phi",
+      "name": "Golden angle",
+      "tier": "lore",
+      "kind": "number",
+      "value": 137.507764,
+      "unit": "°",
+      "note": "360°/φ² — the angle sunflower seeds actually use. Read as hertz it is 137.51 Hz, which is degrees pretending to be a frequency.",
+      "source": "phyllotaxis; arithmetic"
+    },
+    {
+      "id": "euler",
+      "name": "Euler's e",
+      "tier": "lore",
+      "kind": "number",
+      "value": 2.71828183,
+      "unit": "",
+      "note": "e times a hundred: 271.83 Hz. Same unit-free liberty as π.",
+      "source": "arithmetic"
+    },
+    {
+      "id": "light",
+      "name": "Speed of light",
+      "tier": "lore",
+      "kind": "number",
+      "value": 299792458,
+      "unit": "m/s",
+      "note": "The number is exact by definition. Treating metres per second as hertz is a unit error, not physics — which is precisely why it lives in this tier and not the first one.",
+      "source": "SI definition of the metre"
+    },
+    {
+      "id": "fibonacci",
+      "name": "Fibonacci 233",
+      "tier": "lore",
+      "kind": "frequency",
+      "value": 233,
+      "unit": "Hz",
+      "note": "The thirteenth Fibonacci number. Its neighbours 144 and 377 make ratios near φ, so a stack built from them beats slowly and never quite repeats.",
+      "source": "arithmetic"
+    }
+  ]
+}

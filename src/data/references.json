@@ -1,0 +1,512 @@
+{
+  "note": "Everything this app is built on, and a shelf of the good stuff around it. Links open a search rather than a paywall, so nothing here rots. Titles are the citation; the one-liner says why it is here.",
+  "topics": {
+    "entrainment": "Beats, flicker and the frequency-following response",
+    "brain-rhythms": "Oscillations, why brains have rhythms at all",
+    "adhd": "Attention, arousal, and what actually helps",
+    "hearing": "The ear and the auditory brain",
+    "music-science": "Acoustics, tuning, psychoacoustics",
+    "sound-culture": "Listening as a practice and a history",
+    "number": "Number mysticism, harmony of the spheres, and how maths became sacred",
+    "sync": "Synchronisation as a general phenomenon"
+  },
+  "papers": [
+    {
+      "authors": "García-Argibay, M., Santed, M. A. & Reales, J. M.",
+      "year": 2019,
+      "title": "Efficacy of binaural auditory beats in cognition, anxiety, and pain perception: a meta-analysis",
+      "container": "Psychological Research 83, 357–372",
+      "topic": "entrainment",
+      "why": "The anchor. 22 studies, overall g ≈ 0.45; theta/delta beats and anxiety g ≈ 0.69; exposure before and during a task beat during-only. Most of this app's session shapes come from these three findings.",
+      "link": "https://doi.org/10.1007/s00426-018-1066-8"
+    },
+    {
+      "authors": "Ingendoh, R. M., Posny, E. S. & Heine, A.",
+      "year": 2022,
+      "title": "Potential of binaural beats intervention for improving memory and attention: insights from meta-analysis and systematic review",
+      "container": "Psychological Research",
+      "topic": "entrainment",
+      "why": "The more cautious sibling: some promise for memory and attention, and a clear-eyed look at how uneven the study designs are.",
+      "link": "https://doi.org/10.1007/s00426-022-01706-7"
+    },
+    {
+      "authors": "Oster, G.",
+      "year": 1973,
+      "title": "Auditory beats in the brain",
+      "container": "Scientific American 229(4), 94–102",
+      "topic": "entrainment",
+      "why": "The paper that started the modern interest. Still the clearest explanation of why a beat you cannot point to in the air appears inside your head.",
+      "link": "https://scholar.google.com/scholar?q=Oster+Auditory+beats+in+the+brain+1973"
+    },
+    {
+      "authors": "Colzato, L. S., Barone, H., Sellaro, R. & Hommel, B.",
+      "year": 2017,
+      "title": "More attentional focusing through binaural beats: evidence from the global–local task",
+      "container": "Psychological Research 81, 271–277",
+      "topic": "entrainment",
+      "why": "40 Hz beats narrowed the attentional spotlight. One of the cleaner positive results, and the reason Spark climbs to gamma.",
+      "link": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5233742/"
+    },
+    {
+      "authors": "López-Caballero, F. & Escera, C.",
+      "year": 2017,
+      "title": "Binaural beat: a failure to enhance EEG power and emotional arousal",
+      "container": "Frontiers in Human Neuroscience 11",
+      "topic": "entrainment",
+      "why": "The negative result, kept deliberately. A careful attempt to find entrainment in the EEG that did not find it.",
+      "link": "https://scholar.google.com/scholar?q=Lopez-Caballero+Escera+Binaural+beat+failure+to+enhance+EEG+power"
+    },
+    {
+      "authors": "Schwarz, D. W. F. & Taylor, P.",
+      "year": 2005,
+      "title": "Human auditory steady state responses to binaural and monaural beats",
+      "container": "Clinical Neurophysiology 116, 658–668",
+      "topic": "hearing",
+      "why": "Shows the brainstem response to binaural beats is real but much weaker than to monaural ones — the physical beat wins on amplitude.",
+      "link": "https://scholar.google.com/scholar?q=Schwarz+Taylor+2005+auditory+steady+state+binaural+monaural+beats"
+    },
+    {
+      "authors": "Draganova, R., Ross, B., Wollbrink, A. & Pantev, C.",
+      "year": 2008,
+      "title": "Cortical steady-state responses to central and peripheral auditory beats",
+      "container": "Cerebral Cortex 18, 1193–1200",
+      "topic": "hearing",
+      "why": "Where in the auditory pathway a binaural beat actually shows up, measured with MEG.",
+      "link": "https://scholar.google.com/scholar?q=Draganova+2008+Cortical+steady-state+responses+central+peripheral+auditory+beats"
+    },
+    {
+      "authors": "Ross, B., Miyazaki, T., Thompson, J., Jamali, S. & Fujioka, T.",
+      "year": 2014,
+      "title": "Human cortical responses to slow and fast binaural beats reveal multiple mechanisms of binaural hearing",
+      "container": "Journal of Neurophysiology 112, 1871–1884",
+      "topic": "hearing",
+      "why": "Slow and fast beats are not one phenomenon. Useful when deciding what a 4 Hz session and a 40 Hz session even have in common.",
+      "link": "https://scholar.google.com/scholar?q=Ross+2014+cortical+responses+slow+fast+binaural+beats"
+    },
+    {
+      "authors": "Orozco Perez, H. D., Dumas, G. & Lehmann, A.",
+      "year": 2020,
+      "title": "Binaural beats through the auditory pathway: from brainstem to connectivity patterns",
+      "container": "eNeuro 7(2)",
+      "topic": "hearing",
+      "why": "Follows the signal up the pathway and finds effects on connectivity rather than simple power increases.",
+      "link": "https://scholar.google.com/scholar?q=Orozco+Perez+2020+binaural+beats+auditory+pathway+eNeuro"
+    },
+    {
+      "authors": "Chaieb, L., Wilpert, E. C., Reber, T. P. & Fell, J.",
+      "year": 2015,
+      "title": "Auditory beat stimulation and its effects on cognition and mood states",
+      "container": "Frontiers in Psychiatry 6, 70",
+      "topic": "entrainment",
+      "why": "A readable survey of what beat stimulation has and has not been shown to do, from a lab that studies it seriously.",
+      "link": "https://scholar.google.com/scholar?q=Chaieb+2015+auditory+beat+stimulation+cognition+mood+states"
+    },
+    {
+      "authors": "Kennel, S., Taylor, A. G., Lyon, D. & Bourguignon, C.",
+      "year": 2010,
+      "title": "Pilot feasibility study of binaural auditory beats for reducing symptoms of inattention in children and adolescents with ADHD",
+      "container": "Journal of Pediatric Nursing 25(1), 3–11",
+      "topic": "adhd",
+      "why": "The honest ADHD result: no significant change on inattention scales, while parents and teenagers reported homework going better. Both halves matter.",
+      "link": "https://www.sciencedirect.com/science/article/abs/pii/S0882596308003321"
+    },
+    {
+      "authors": "Ilioudi, M. et al.",
+      "year": 2022,
+      "title": "A pilot add-on randomized controlled trial evaluating the effect of binaural beats on study performance, mind-wandering, and core symptoms of adult ADHD",
+      "container": "European Psychiatry",
+      "topic": "adhd",
+      "why": "Adults with ADHD reported studying better; the rating scales and attention tests did not move. Read this before believing any app, including this one.",
+      "link": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9564012/"
+    },
+    {
+      "authors": "Arns, M., Conners, C. K. & Kraemer, H. C.",
+      "year": 2013,
+      "title": "A decade of EEG theta/beta ratio research in ADHD: a meta-analysis",
+      "container": "Journal of Attention Disorders 17(5), 374–383",
+      "topic": "adhd",
+      "why": "Why focus sessions here climb toward beta and stay out of theta — and why the theta/beta ratio is a real group difference but a poor diagnostic test.",
+      "link": "https://scholar.google.com/scholar?q=Arns+Conners+Kraemer+2013+decade+EEG+theta+beta+ratio+ADHD+meta-analysis"
+    },
+    {
+      "authors": "Söderlund, G., Sikström, S. & Smart, A.",
+      "year": 2007,
+      "title": "Listen to the noise: noise is beneficial for cognitive performance in ADHD",
+      "container": "Journal of Child Psychology and Psychiatry 48(8), 840–847",
+      "topic": "adhd",
+      "why": "The stochastic-resonance result: moderate background noise helped inattentive children and slightly hurt the others. The noise bed in this app is not decoration.",
+      "link": "https://scholar.google.com/scholar?q=Soderlund+Sikstrom+Smart+2007+listen+to+the+noise+ADHD"
+    },
+    {
+      "authors": "Helps, S. K., Bamford, S., Sonuga-Barke, E. J. S. & Söderlund, G.",
+      "year": 2014,
+      "title": "Different effects of adding white noise on cognitive performance of sub-, normal and super-attentive school children",
+      "container": "PLOS ONE 9(11)",
+      "topic": "adhd",
+      "why": "The same effect, with the crucial detail: what helps one attention profile can hinder another. Adjust the bed until it helps you.",
+      "link": "https://scholar.google.com/scholar?q=Helps+2014+different+effects+adding+white+noise+cognitive+performance+attentive+children"
+    },
+    {
+      "authors": "Cortese, S. et al.",
+      "year": 2016,
+      "title": "Neurofeedback for attention-deficit/hyperactivity disorder: meta-analysis of clinical and neuropsychological outcomes from randomized controlled trials",
+      "container": "Journal of the American Academy of Child & Adolescent Psychiatry 55(6), 444–455",
+      "topic": "adhd",
+      "why": "The check on neurofeedback enthusiasm: effects shrink sharply with blinded raters. A useful humility calibration for everything adjacent, including beats.",
+      "link": "https://scholar.google.com/scholar?q=Cortese+2016+neurofeedback+ADHD+meta-analysis+blinded"
+    },
+    {
+      "authors": "Buzsáki, G. & Draguhn, A.",
+      "year": 2004,
+      "title": "Neuronal oscillations in cortical networks",
+      "container": "Science 304, 1926–1929",
+      "topic": "brain-rhythms",
+      "why": "Six pages on why the brain has rhythms in the first place, and why their frequencies form a near-logarithmic ladder. The best single thing to read here.",
+      "link": "https://doi.org/10.1126/science.1099745"
+    },
+    {
+      "authors": "Iaccarino, H. F. et al.",
+      "year": 2016,
+      "title": "Gamma frequency entrainment attenuates amyloid load and modifies microglia",
+      "container": "Nature 540, 230–235",
+      "topic": "entrainment",
+      "why": "The 40 Hz result that made sensory entrainment a serious research programme. Mice, amyloid, and a mechanism — nothing to do with ADHD, everything to do with plausibility.",
+      "link": "https://doi.org/10.1038/nature20587"
+    },
+    {
+      "authors": "Martorell, A. J. et al.",
+      "year": 2019,
+      "title": "Multi-sensory gamma stimulation ameliorates Alzheimer's-associated pathology and improves cognition",
+      "container": "Cell 177(2), 256–271",
+      "topic": "entrainment",
+      "why": "Light and sound together, and the origin of the GENUS protocol in the Codex.",
+      "link": "https://scholar.google.com/scholar?q=Martorell+2019+multi-sensory+gamma+stimulation+Alzheimer+cognition+Cell"
+    },
+    {
+      "authors": "Thut, G., Schyns, P. G. & Gross, J.",
+      "year": 2011,
+      "title": "Entrainment of perceptually relevant brain oscillations by non-invasive rhythmic stimulation of the brain",
+      "container": "Frontiers in Psychology 2, 170",
+      "topic": "brain-rhythms",
+      "why": "What the word \"entrainment\" is allowed to mean, and the evidence standard it should be held to.",
+      "link": "https://scholar.google.com/scholar?q=Thut+Schyns+Gross+2011+entrainment+perceptually+relevant+brain+oscillations"
+    },
+    {
+      "authors": "Herrmann, C. S.",
+      "year": 2001,
+      "title": "Human EEG responses to 1–100 Hz flicker: resonance phenomena in visual cortex and their potential correlation to cognitive phenomena",
+      "container": "Experimental Brain Research 137, 346–353",
+      "topic": "brain-rhythms",
+      "why": "The visual counterpart, and the reason nothing in this app's visuals flickers faster than 2 Hz.",
+      "link": "https://scholar.google.com/scholar?q=Herrmann+2001+human+EEG+responses+1-100+Hz+flicker+resonance+visual+cortex"
+    },
+    {
+      "authors": "Fisher, R. S. et al.",
+      "year": 2005,
+      "title": "Photic- and pattern-induced seizures: expert consensus of the Epilepsy Foundation of America Working Group",
+      "container": "Epilepsia 46(9), 1426–1441",
+      "topic": "brain-rhythms",
+      "why": "The safety document behind the flicker cap. If you fork this app, read it before you make the geometry pulse with the beat.",
+      "link": "https://scholar.google.com/scholar?q=Fisher+2005+photic+pattern+induced+seizures+expert+consensus+Epilepsy+Foundation"
+    },
+    {
+      "authors": "Atwater, F. H.",
+      "year": 1997,
+      "title": "Accessing anomalous states of consciousness with a binaural beat technology",
+      "container": "Journal of Scientific Exploration 11(3), 263–274",
+      "topic": "entrainment",
+      "why": "The Monroe Institute's own account of Hemi-Sync, by its research director. Primary source for the Focus levels, and a good exercise in reading claims carefully.",
+      "link": "https://scholar.google.com/scholar?q=Atwater+1997+accessing+anomalous+states+consciousness+binaural+beat+technology"
+    },
+    {
+      "authors": "Wahbeh, H., Calabrese, C. & Zwickey, H.",
+      "year": 2007,
+      "title": "Binaural beat technology in humans: a pilot study to assess psychologic and physiologic effects",
+      "container": "Journal of Alternative and Complementary Medicine 13(1), 25–32",
+      "topic": "entrainment",
+      "why": "Small, honest, mixed. A fair picture of what this field's typical study looks like.",
+      "link": "https://scholar.google.com/scholar?q=Wahbeh+2007+binaural+beat+technology+humans+pilot+study"
+    },
+    {
+      "authors": "Gould van Praag, C. D. et al.",
+      "year": 2017,
+      "title": "Mind-wandering and alterations to default mode network connectivity when listening to naturalistic versus artificial sounds",
+      "container": "Scientific Reports 7, 45273",
+      "topic": "hearing",
+      "why": "Natural sound pulls attention outward, artificial sound lets it drift inward. Relevant to every choice about noise beds and drones.",
+      "link": "https://scholar.google.com/scholar?q=Gould+van+Praag+2017+mind-wandering+default+mode+naturalistic+artificial+sounds"
+    },
+    {
+      "authors": "Pietschnig, J., Voracek, M. & Formann, A. K.",
+      "year": 2010,
+      "title": "Mozart effect–Shmozart effect: a meta-analysis",
+      "container": "Intelligence 38(3), 314–323",
+      "topic": "music-science",
+      "why": "How a small, fragile finding becomes a global product category. Required reading before trusting any sound-makes-you-smarter claim, this app included.",
+      "link": "https://scholar.google.com/scholar?q=Pietschnig+Voracek+Formann+2010+Mozart+effect+Shmozart+meta-analysis"
+    }
+  ],
+  "documents": [
+    {
+      "authors": "McDonnell, W. M. (US Army)",
+      "year": 1983,
+      "title": "Analysis and Assessment of Gateway Process",
+      "container": "CIA-RDP96-00788R001700210024-6, declassified 2003",
+      "topic": "entrainment",
+      "why": "The document everyone means by \"the CIA binaural beats file\". An Army officer's assessment of Monroe's Hemi-Sync, mixing a competent account of the frequency-following response with a lot of holographic-universe cosmology. Read it as a primary source, not a proof.",
+      "link": "https://www.cia.gov/readingroom/document/cia-rdp96-00788r001700210024-6"
+    },
+    {
+      "authors": "Tsai Laboratory / Picower Institute, MIT",
+      "year": 2025,
+      "title": "40 Hz sensory stimulation: research overview",
+      "container": "MIT News and Picower Institute summaries",
+      "topic": "entrainment",
+      "why": "Where to follow the GENUS work as it develops, in plain language and without the supplement-shop framing.",
+      "link": "https://picower.mit.edu/news/review-evidence-expanding-40hz-gamma-stimulation-promotes-brain-health"
+    },
+    {
+      "authors": "World Health Organization",
+      "year": 2019,
+      "title": "Safe listening devices and systems: a WHO-ITU standard",
+      "container": "WHO/ITU H.870",
+      "topic": "hearing",
+      "why": "The actual guidance on listening dose — level and duration together. The reason this app opens at a quarter volume and keeps a limiter you cannot switch off.",
+      "link": "https://www.who.int/publications/i/item/9789241515276"
+    }
+  ],
+  "books": [
+    {
+      "authors": "Buzsáki, G.",
+      "year": 2006,
+      "title": "Rhythms of the Brain",
+      "topic": "brain-rhythms",
+      "why": "The definitive book on neural oscillations. Dense, beautiful, and the source of the intuition that brain rhythms form a scale rather than a list.",
+      "link": "https://openlibrary.org/search?q=Rhythms+of+the+Brain+Buzsaki"
+    },
+    {
+      "authors": "Levitin, D. J.",
+      "year": 2006,
+      "title": "This Is Your Brain on Music",
+      "topic": "music-science",
+      "why": "The friendliest door into music and the brain, from someone who was a record producer first.",
+      "link": "https://openlibrary.org/search?q=This+Is+Your+Brain+on+Music"
+    },
+    {
+      "authors": "Sacks, O.",
+      "year": 2007,
+      "title": "Musicophilia: Tales of Music and the Brain",
+      "topic": "music-science",
+      "why": "What music does to people when the usual machinery is altered. Case studies that reframe what \"listening\" is.",
+      "link": "https://openlibrary.org/search?q=Musicophilia+Sacks"
+    },
+    {
+      "authors": "Kraus, N.",
+      "year": 2021,
+      "title": "Of Sound Mind: How Our Brain Constructs a Meaningful Sonic World",
+      "topic": "hearing",
+      "why": "Decades of auditory-neuroscience lab work made readable. Especially good on sound and attention.",
+      "link": "https://openlibrary.org/search?q=Of+Sound+Mind+Kraus"
+    },
+    {
+      "authors": "Horowitz, S. S.",
+      "year": 2012,
+      "title": "The Universal Sense: How Hearing Shapes the Mind",
+      "topic": "hearing",
+      "why": "Hearing as the sense that never switches off — which is why sound can work on you while you do something else.",
+      "link": "https://openlibrary.org/search?q=The+Universal+Sense+Horowitz"
+    },
+    {
+      "authors": "Deutsch, D.",
+      "year": 2019,
+      "title": "Musical Illusions and Phantom Words",
+      "topic": "hearing",
+      "why": "Auditory illusions from the researcher who found many of them. A binaural beat is an illusion too; this is the field it belongs to.",
+      "link": "https://openlibrary.org/search?q=Musical+Illusions+and+Phantom+Words+Deutsch"
+    },
+    {
+      "authors": "Patel, A. D.",
+      "year": 2008,
+      "title": "Music, Language, and the Brain",
+      "topic": "music-science",
+      "why": "The rigorous comparison of two rhythmic systems the brain treats differently. Where to go after Levitin.",
+      "link": "https://openlibrary.org/search?q=Music+Language+and+the+Brain+Patel"
+    },
+    {
+      "authors": "Margulis, E. H.",
+      "year": 2013,
+      "title": "On Repeat: How Music Plays the Mind",
+      "topic": "music-science",
+      "why": "Why repetition is pleasurable rather than boring — the psychology underneath every drone and loop in this app.",
+      "link": "https://openlibrary.org/search?q=On+Repeat+How+Music+Plays+the+Mind"
+    },
+    {
+      "authors": "Helmholtz, H. von",
+      "year": 1863,
+      "title": "On the Sensations of Tone as a Physiological Basis for the Theory of Music",
+      "topic": "music-science",
+      "why": "The founding text. Beats, combination tones, consonance as physics and physiology — written before anyone could record a sound.",
+      "link": "https://openlibrary.org/search?q=On+the+Sensations+of+Tone+Helmholtz"
+    },
+    {
+      "authors": "Roederer, J. G.",
+      "year": 2008,
+      "title": "The Physics and Psychophysics of Music: An Introduction",
+      "topic": "music-science",
+      "why": "The textbook to check your intuitions against. Beat perception, critical bands, pitch — all with the numbers.",
+      "link": "https://openlibrary.org/search?q=Physics+and+Psychophysics+of+Music+Roederer"
+    },
+    {
+      "authors": "Sethares, W. A.",
+      "year": 1998,
+      "title": "Tuning, Timbre, Spectrum, Scale",
+      "topic": "music-science",
+      "why": "Dissonance derived from spectra rather than tradition. If you build stacks in the Lab and want to know why some sound harsh, this is the book.",
+      "link": "https://openlibrary.org/search?q=Tuning+Timbre+Spectrum+Scale+Sethares"
+    },
+    {
+      "authors": "Roads, C.",
+      "year": 2001,
+      "title": "Microsound",
+      "topic": "music-science",
+      "why": "Sound at the timescale where rhythm becomes pitch — exactly the boundary the experimental envelope in this app lets you cross.",
+      "link": "https://openlibrary.org/search?q=Microsound+Curtis+Roads"
+    },
+    {
+      "authors": "Xenakis, I.",
+      "year": 1971,
+      "title": "Formalized Music: Thought and Mathematics in Composition",
+      "topic": "number",
+      "why": "Composition as mathematics, with no mysticism and no apology. The patron saint of a Lab that lets you type an equation and hear it.",
+      "link": "https://openlibrary.org/search?q=Formalized+Music+Xenakis"
+    },
+    {
+      "authors": "Oliveros, P.",
+      "year": 2005,
+      "title": "Deep Listening: A Composer's Sound Practice",
+      "topic": "sound-culture",
+      "why": "Attention to sound as a discipline you can practise. A useful counterweight to thinking the tone does the work.",
+      "link": "https://openlibrary.org/search?q=Deep+Listening+Pauline+Oliveros"
+    },
+    {
+      "authors": "Blesser, B. & Salter, L.-R.",
+      "year": 2006,
+      "title": "Spaces Speak, Are You Listening? Experiencing Aural Architecture",
+      "topic": "sound-culture",
+      "why": "Rooms as instruments. Explains why the same session sounds different in headphones, a car, and a kitchen.",
+      "link": "https://openlibrary.org/search?q=Spaces+Speak+Are+You+Listening"
+    },
+    {
+      "authors": "Toop, D.",
+      "year": 1995,
+      "title": "Ocean of Sound",
+      "topic": "sound-culture",
+      "why": "The cultural history of ambient listening, from Debussy to Eno. Where the aesthetic of this app comes from, if not the science.",
+      "link": "https://openlibrary.org/search?q=Ocean+of+Sound+David+Toop"
+    },
+    {
+      "authors": "Hart, M. & Stevens, J.",
+      "year": 1990,
+      "title": "Drumming at the Edge of Magic",
+      "topic": "sound-culture",
+      "why": "Rhythm as trance technology, told by a drummer who went looking for the anthropology. The oldest version of what this app is doing.",
+      "link": "https://openlibrary.org/search?q=Drumming+at+the+Edge+of+Magic"
+    },
+    {
+      "authors": "Cousto, H.",
+      "year": 1984,
+      "title": "The Cosmic Octave: Origin of Harmony",
+      "topic": "number",
+      "why": "The source of every planetary tone in the Codex. The octave arithmetic is exactly right; the conclusions are exactly unproven. A perfect specimen of the lore tier.",
+      "link": "https://openlibrary.org/search?q=The+Cosmic+Octave+Cousto"
+    },
+    {
+      "authors": "Godwin, J.",
+      "year": 1987,
+      "title": "Harmonies of Heaven and Earth",
+      "topic": "number",
+      "why": "A scholar's history of the idea that music is cosmology — Pythagoras to the theosophists. How to take an idea seriously without believing it.",
+      "link": "https://openlibrary.org/search?q=Harmonies+of+Heaven+and+Earth+Godwin"
+    },
+    {
+      "authors": "James, J.",
+      "year": 1993,
+      "title": "The Music of the Spheres: Music, Science, and the Natural Order of the Universe",
+      "topic": "number",
+      "why": "Two thousand years of treating harmony as physics, and the moment the two finally parted company.",
+      "link": "https://openlibrary.org/search?q=The+Music+of+the+Spheres+James"
+    },
+    {
+      "authors": "Pesic, P.",
+      "year": 2014,
+      "title": "Music and the Making of Modern Science",
+      "topic": "number",
+      "why": "The argument that music was not a metaphor for early science but an instrument of it. The thesis this whole app is a toy version of.",
+      "link": "https://openlibrary.org/search?q=Music+and+the+Making+of+Modern+Science+Pesic"
+    },
+    {
+      "authors": "Monroe, R. A.",
+      "year": 1971,
+      "title": "Journeys Out of the Body",
+      "topic": "entrainment",
+      "why": "Where Hemi-Sync and the Focus levels come from, in the author's own unhedged voice. Primary source for the Gateway material.",
+      "link": "https://openlibrary.org/search?q=Journeys+Out+of+the+Body+Monroe"
+    },
+    {
+      "authors": "Strogatz, S.",
+      "year": 2003,
+      "title": "Sync: The Emerging Science of Spontaneous Order",
+      "topic": "sync",
+      "why": "Why coupled oscillators fall into step — fireflies, pacemaker cells, bridges, neurons. The general phenomenon that \"entrainment\" is a special case of.",
+      "link": "https://openlibrary.org/search?q=Sync+Strogatz"
+    },
+    {
+      "authors": "Pikovsky, A., Rosenblum, M. & Kurths, J.",
+      "year": 2001,
+      "title": "Synchronization: A Universal Concept in Nonlinear Sciences",
+      "topic": "sync",
+      "why": "Strogatz with the mathematics put back in. Where to check whether a synchronisation claim is even the right shape.",
+      "link": "https://openlibrary.org/search?q=Synchronization+A+Universal+Concept+in+Nonlinear+Sciences"
+    },
+    {
+      "authors": "Barkley, R. A.",
+      "year": 2020,
+      "title": "Taking Charge of ADHD (4th ed.)",
+      "topic": "adhd",
+      "why": "The evidence-based reference. If something in your life needs treating rather than soundtracking, start here, not with an app.",
+      "link": "https://openlibrary.org/search?q=Taking+Charge+of+ADHD+Barkley"
+    },
+    {
+      "authors": "Hallowell, E. M. & Ratey, J. J.",
+      "year": 1994,
+      "title": "Driven to Distraction",
+      "topic": "adhd",
+      "why": "The book that made adult ADHD legible to a general audience. Warm, dated in places, still useful.",
+      "link": "https://openlibrary.org/search?q=Driven+to+Distraction+Hallowell"
+    },
+    {
+      "authors": "Maté, G.",
+      "year": 1999,
+      "title": "Scattered Minds",
+      "topic": "adhd",
+      "why": "The developmental, environment-first reading of attention. Contested, and worth arguing with.",
+      "link": "https://openlibrary.org/search?q=Scattered+Minds+Mate"
+    },
+    {
+      "authors": "Hofstadter, D. R.",
+      "year": 1979,
+      "title": "Gödel, Escher, Bach: An Eternal Golden Braid",
+      "topic": "number",
+      "why": "Loops, self-reference, and the deep pleasure of pattern. Not about sound therapy at all, and somehow the most relevant book on this shelf.",
+      "link": "https://openlibrary.org/search?q=Godel+Escher+Bach"
+    },
+    {
+      "authors": "Livio, M.",
+      "year": 2002,
+      "title": "The Golden Ratio",
+      "topic": "number",
+      "why": "A mathematician patiently separating what φ actually does from what it is credited with. The method this app's tier system copies.",
+      "link": "https://openlibrary.org/search?q=The+Golden+Ratio+Livio"
+    }
+  ]
+}

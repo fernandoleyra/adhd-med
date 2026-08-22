@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5" />
+    <title>ADHD MED — generative frequencies for focus</title>
+    <meta
+      name="description"
+      content="An ADHD digital med: build your own binaural beats, turn words and constants into frequencies, and listen offline. Free, open source, no accounts. Not medicine — arithmetic you can hear."
+    />
+    <meta name="theme-color" content="#fafaf7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b0b0f" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon.svg" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="ADHD MED" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta property="og:title" content="ADHD MED" />
+    <meta property="og:description" content="Generative binaural beats and frequency geometry for focus. Free, offline, no accounts." />
+    <meta property="og:type" content="website" />
+  </head>
+  <body>
+    <canvas id="veil" aria-hidden="true"></canvas>
+
+    <div id="shell">
+      <header id="brand">
+        <h1>ADHD&nbsp;MED</h1>
+        <span class="spacer"></span>
+        <button id="btn-plane" type="button" title="Airplane mode: check offline readiness" aria-label="Airplane mode">✈</button>
+        <button id="btn-settings" type="button" title="Settings" aria-label="Settings">⚙</button>
+      </header>
+
+      <main id="view" tabindex="-1">
+        <noscript>
+          <p class="lead">
+            ADHD MED synthesises every tone in your browser, so it needs JavaScript. There is no server and no
+            account — the whole app is the page you just loaded.
+          </p>
+        </noscript>
+      </main>
+
+      <footer id="foot"></footer>
+
+      <div id="dock">
+        <div id="mini" role="button" tabindex="0" aria-label="Open the session"></div>
+        <nav id="tabs" aria-label="Modes"></nav>
+      </div>
+    </div>
+
+    <p id="live" class="sr" role="status" aria-live="polite"></p>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
