@@ -18,12 +18,22 @@ export const config = { runtime: 'edge' };
 
 const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 
-const ALLOWED_MODELS = new Set([
+/**
+ * The models this route will pay for. Overridable with DJ_MODELS (comma
+ * separated) so a deployment can match whatever its OpenRouter account actually
+ * permits — provider and data-policy guardrails there can rule out every
+ * default without a line of code being wrong.
+ */
+const DEFAULT_MODELS = [
   'openrouter/free',
   'google/gemini-2.5-flash',
   'anthropic/claude-sonnet-4.6',
   'openai/gpt-5.2',
-]);
+];
+
+const ALLOWED_MODELS = new Set(
+  (process.env.DJ_MODELS?.split(',').map((m) => m.trim()).filter(Boolean) ?? DEFAULT_MODELS),
+);
 
 const MAX_BODY_BYTES = 16_000;
 const MAX_TOKENS = 2000;
@@ -103,8 +113,14 @@ export default async function handler(request: Request): Promise<Response> {
     return json({ error: 'could not reach OpenRouter' }, 502);
   }
 
+  // Never pass an upstream 404 through unchanged. The client reads 404 on this
+  // path as "this deployment has no DJ" and stops asking for the session —
+  // which is right for a static host, and quite wrong for OpenRouter declining
+  // a model. Report a refusal as a refusal, body intact.
+  const status = upstream.status === 404 ? 502 : upstream.status;
+
   return new Response(await upstream.text(), {
-    status: upstream.status,
+    status,
     headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
   });
 }

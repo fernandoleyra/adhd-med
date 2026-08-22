@@ -106,6 +106,13 @@ To host the AI DJ for everyone, set `OPENROUTER_API_KEY` in the project's
 environment; `api/dj.ts` picks it up. Without it that route answers 501 and the
 app quietly uses the scripted DJ.
 
+`DJ_MODELS` (comma separated) overrides which models that route will pay for.
+Worth knowing: OpenRouter's own **allowed providers** and **data policy**
+settings can refuse every model on the list — the free endpoints need prompt
+logging enabled, and a narrowed provider list rules out models those providers
+don't serve. The app then says "OpenRouter settings block that model" rather
+than pretending there is no DJ.
+
 ## The AI DJ is optional
 
 The field works without a key: your text is read by keyword and handed to the
