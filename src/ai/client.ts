@@ -35,6 +35,13 @@ const NO_HOSTED = new Set([404, 405, 501]);
  */
 let hostedUsable = true;
 
+/**
+ * What the hosted route actually answered with. A deployment can pin its own
+ * model, so the browser's setting is a request, not a fact — the only honest
+ * label is the id that comes back in the reply.
+ */
+let hostedModel = '';
+
 export interface AiRequest {
   text: string;
   minutes: number;
@@ -244,6 +251,9 @@ export async function requestSession(req: AiRequest): Promise<Script> {
     throw new AiError('The DJ sent something unreadable', 'shape');
   }
 
+  const served = (payload as { model?: unknown }).model;
+  if (route === 'hosted' && typeof served === 'string' && served) hostedModel = served;
+
   const session = readSession(payload);
   if (!session) throw new AiError('The DJ did not return a session', 'shape');
   return aiSessionToScript(session, `${req.text}|${req.minutes}`);
@@ -257,8 +267,9 @@ export function aiAvailable(settings: { apiKey: string; proxyUrl: string }): boo
 export function aiLabel(settings: { apiKey: string; proxyUrl: string; model: string }): string {
   const route = aiRoute(settings);
   if (route === 'proxy') return 'AI · proxy';
-  // A key and the hosted route look the same from here, and the difference is
-  // not the user's problem: either way a model answers.
-  if (route === 'key' || route === 'hosted') return `AI · ${settings.model}`;
+  if (route === 'key') return `AI · ${settings.model}`;
+  // Hosted: name what answered once we know, since the deployment may have
+  // pinned something other than the model in Settings.
+  if (route === 'hosted') return `AI · ${hostedModel || settings.model}`;
   return navigator.onLine === false ? 'offline · scripted' : 'scripted · no key';
 }

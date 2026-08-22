@@ -102,16 +102,21 @@ The live copy is on Vercel: `vercel.json` sets the build command, keeps `sw.js`
 and `precache.json` uncacheable so a new deploy can always replace the old
 worker, and marks the hashed assets immutable. Pushing to `main` deploys.
 
-To host the AI DJ for everyone, set `OPENROUTER_API_KEY` in the project's
-environment; `api/dj.ts` picks it up. Without it that route answers 501 and the
-app quietly uses the scripted DJ.
+To host the AI DJ for everyone, three environment variables, all read by
+`api/dj.ts`:
 
-`DJ_MODELS` (comma separated) overrides which models that route will pay for.
-Worth knowing: OpenRouter's own **allowed providers** and **data policy**
-settings can refuse every model on the list — the free endpoints need prompt
-logging enabled, and a narrowed provider list rules out models those providers
-don't serve. The app then says "OpenRouter settings block that model" rather
-than pretending there is no DJ.
+| | |
+|---|---|
+| `OPENROUTER_API_KEY` | required. Without it the route answers 501 and the app quietly uses the scripted DJ. |
+| `DJ_MODEL` | pins one model, in OpenRouter's `vendor/model` naming (e.g. `nvidia/nemotron-3.5-lightning`). Whatever a visitor's browser asks for, this answers — the deployment pays, so the deployment chooses. |
+| `DJ_MODELS` | comma-separated allow-list a visitor may pick from, replacing the four built-in defaults. Ignored when `DJ_MODEL` is set. |
+
+Worth knowing before you pick: OpenRouter's own **allowed providers** and **data
+policy** settings can refuse every model here. A narrowed provider list rules
+out models those providers don't serve, and the `:free` endpoints generally
+require prompt logging to be enabled. The app says "OpenRouter settings block
+that model" rather than pretending there is no DJ, and the DJ badge names
+whichever model actually answered.
 
 ## The AI DJ is optional
 

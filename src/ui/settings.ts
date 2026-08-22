@@ -118,6 +118,7 @@ export function openSettings(): void {
         el('label', { class: 'field' }, [
           el('span', { class: 'field-head' }, [el('span', { class: 'field-label', text: 'Model' })]),
           modelInput,
+          el('span', { class: 'field-hint', text: 'yours · a hosted DJ may pin its own' }),
         ]),
         modelChips,
         el('label', { class: 'field', style: { marginTop: 'var(--s4)' } }, [

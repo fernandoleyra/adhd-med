@@ -19,10 +19,17 @@ export const config = { runtime: 'edge' };
 const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 
 /**
- * The models this route will pay for. Overridable with DJ_MODELS (comma
- * separated) so a deployment can match whatever its OpenRouter account actually
- * permits — provider and data-policy guardrails there can rule out every
- * default without a line of code being wrong.
+ * Which model answers, decided by the deployment rather than the browser —
+ * this route is the one paying, and an OpenRouter account's provider and
+ * data-policy guardrails can rule out every default here without a line of code
+ * being wrong. Both variables take OpenRouter ids ("vendor/model").
+ *
+ * DJ_MODEL   pins one model. Whatever the browser asks for, this answers.
+ * DJ_MODELS  a comma-separated allow-list the browser may choose from.
+ *
+ * Set DJ_MODEL for "this deployment DJs with this model", which is the simple
+ * case. Set DJ_MODELS instead to let visitors pick. DJ_MODEL wins if both are
+ * set. Neither one means the four defaults below.
  */
 const DEFAULT_MODELS = [
   'openrouter/free',
@@ -31,9 +38,15 @@ const DEFAULT_MODELS = [
   'openai/gpt-5.2',
 ];
 
-const ALLOWED_MODELS = new Set(
-  (process.env.DJ_MODELS?.split(',').map((m) => m.trim()).filter(Boolean) ?? DEFAULT_MODELS),
-);
+/** Read per request, so a test can vary it and an env change needs no code. */
+function pinnedModel(): string {
+  return process.env.DJ_MODEL?.trim() ?? '';
+}
+
+function allowedModels(): Set<string> {
+  const list = process.env.DJ_MODELS?.split(',').map((m) => m.trim()).filter(Boolean);
+  return new Set(list?.length ? list : DEFAULT_MODELS);
+}
 
 const MAX_BODY_BYTES = 16_000;
 const MAX_TOKENS = 2000;
@@ -83,7 +96,11 @@ export default async function handler(request: Request): Promise<Response> {
     return json({ error: 'invalid JSON' }, 400);
   }
 
-  if (typeof body.model !== 'string' || !ALLOWED_MODELS.has(body.model)) {
+  // A pinned model needs no permission from the allow-list: naming it in the
+  // environment *is* the permission.
+  const pinned = pinnedModel();
+  const model = pinned || (typeof body.model === 'string' ? body.model.trim() : '');
+  if (!pinned && !allowedModels().has(model)) {
     return json({ error: 'model not allowed' }, 400);
   }
   if (!Array.isArray(body.messages) || body.messages.length === 0) {
@@ -102,7 +119,7 @@ export default async function handler(request: Request): Promise<Response> {
         authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: body.model,
+        model,
         max_tokens: Math.min(MAX_TOKENS, Number(body.max_tokens) || MAX_TOKENS),
         temperature: typeof body.temperature === 'number' ? body.temperature : undefined,
         messages: body.messages,
