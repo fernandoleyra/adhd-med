@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="ADHD MED">
+  <rect width="512" height="512" fill="#fafaf7"/>
+  <g fill="none" stroke="#16161a" stroke-width="7">
+    <circle cx="256" cy="256" r="128"/>
+    <circle cx="256" cy="256" r="86"/>
+  </g>
+  <path d="M128 256 Q 192 176 256 256 T 384 256" fill="none" stroke="#5546d6" stroke-width="10" stroke-linecap="round"/>
+</svg>

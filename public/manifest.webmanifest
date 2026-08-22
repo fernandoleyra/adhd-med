@@ -1,0 +1,16 @@
+{
+  "name": "ADHD MED",
+  "short_name": "ADHD MED",
+  "description": "Generative binaural beats and frequency geometry for focus. Build your own sessions, hear constants and words as tones, listen offline. Not medicine — arithmetic you can hear.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fafaf7",
+  "theme_color": "#fafaf7",
+  "categories": ["health", "music", "productivity", "utilities"],
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
