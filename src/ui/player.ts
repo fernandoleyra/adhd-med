@@ -245,13 +245,12 @@ export function openSession(): void {
     );
   }
 
-  openSheet({ title: 'Session', body });
+  // The sheet's subscription is released when the sheet closes, not on the
+  // next engine event — otherwise a paused session leaks a listener per open.
+  let unsub: (() => void) | null = null;
+  openSheet({ title: 'Session', body, onclose: () => unsub?.() });
 
-  const unsub = engine.subscribe((s) => {
-    if (!document.getElementById('sheet')) {
-      unsub();
-      return;
-    }
+  unsub = engine.subscribe((s) => {
     clock.textContent = `${formatClock(s.position)} / ${formatClock(s.duration)}`;
     fill.style.width = `${s.duration ? (s.position / s.duration) * 100 : 0}%`;
     playBtn.textContent = s.status === 'playing' ? '❙❙' : '▶';
