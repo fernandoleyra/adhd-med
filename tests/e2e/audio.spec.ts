@@ -252,3 +252,88 @@ test.describe('the audio engine emits what it claims', () => {
     expect(Number.isFinite(peak)).toBe(true);
   });
 });
+
+test.describe('long sessions and seeking', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('./');
+    await dismissLeaflet(page);
+  });
+
+  test('a 90-minute session schedules in windows and survives a seek to the end', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const engine = window.adhdmed.engine;
+      const script = window.adhdmed.generate({ goal: 'study', minutes: 90, seed: 7 });
+      window.adhdmed.play(script);
+      await new Promise((r) => setTimeout(r, 900));
+      const early = engine.snapshot();
+
+      // Seek most of the way through: everything past the first window has to be
+      // scheduled on demand.
+      await engine.seek(80 * 60);
+      await new Promise((r) => setTimeout(r, 900));
+      const late = engine.snapshot();
+
+      const analyser = engine.analyserL!;
+      const data = new Float32Array(analyser.fftSize);
+      let energy = 0;
+      for (let i = 0; i < 10; i++) {
+        analyser.getFloatTimeDomainData(data);
+        for (const v of data) energy = Math.max(energy, Math.abs(v));
+        await new Promise((r) => setTimeout(r, 60));
+      }
+
+      // and back to the start
+      await engine.seek(0);
+      await new Promise((r) => setTimeout(r, 500));
+      const rewound = engine.snapshot();
+      await engine.stop();
+
+      return {
+        duration: early.duration,
+        earlyStatus: early.status,
+        earlyPos: early.position,
+        latePos: late.position,
+        lateSeg: late.segIndex,
+        lateStatus: late.status,
+        energy,
+        rewoundPos: rewound.position,
+        rewoundStatus: rewound.status,
+      };
+    });
+
+    expect(result.duration).toBeGreaterThan(5200);
+    expect(result.earlyStatus).toBe('playing');
+    expect(result.earlyPos).toBeLessThan(60);
+    expect(result.latePos).toBeGreaterThan(4790);
+    expect(result.lateStatus).toBe('playing');
+    expect(result.lateSeg).toBeGreaterThan(2);
+    expect(result.energy).toBeGreaterThan(0.001);
+    expect(result.rewoundPos).toBeLessThan(30);
+    expect(result.rewoundStatus).toBe('playing');
+  });
+
+  test('pause freezes the clock and resume carries on from there', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const engine = window.adhdmed.engine;
+      window.adhdmed.play(window.adhdmed.generate({ goal: 'focus', minutes: 25, seed: 3 }));
+      await new Promise((r) => setTimeout(r, 1500));
+      const before = engine.snapshot().position;
+      await engine.pause();
+      const paused = engine.snapshot().position;
+      await new Promise((r) => setTimeout(r, 1200));
+      const stillPaused = engine.snapshot().position;
+      await engine.play();
+      await new Promise((r) => setTimeout(r, 900));
+      const after = engine.snapshot().position;
+      await engine.stop();
+      return { before, paused, stillPaused, after };
+    });
+
+    expect(result.before).toBeGreaterThan(0.5);
+    // the clock does not advance while paused
+    expect(Math.abs(result.stillPaused - result.paused)).toBeLessThan(0.2);
+    // and it continues from where it stopped rather than restarting
+    expect(result.after).toBeGreaterThan(result.paused);
+    expect(result.after).toBeLessThan(result.paused + 3);
+  });
+});

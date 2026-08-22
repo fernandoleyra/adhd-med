@@ -234,6 +234,9 @@ button.icon {
 button.icon.is-primary { border-color: var(--accent); color: var(--accent); border-width: 1.5px; }
 
 .row { display: flex; gap: var(--s2); flex-wrap: wrap; align-items: center; }
+.group { display: block; margin: 0 0 var(--s4); }
+.group > .field-label { display: block; margin-bottom: 6px; }
+.group > .field-hint { display: block; margin-top: 6px; }
 .row.tight { gap: var(--s1); }
 .spread { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s3); }
 

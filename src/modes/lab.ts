@@ -41,7 +41,7 @@ import {
   toast,
   toggle,
 } from '../ui/dom.js';
-import { copyShare, methodChips, playScript, segmentSummary } from '../ui/player.js';
+import { copyShare, playScript, segmentSummary } from '../ui/player.js';
 import { drawTimeline, fitCanvas, readInk } from '../viz/marks.js';
 import { moireAngle } from '../viz/geometry.js';
 import { shareUrl } from '../core/codec.js';
@@ -405,13 +405,21 @@ function buildMods(l: Layer, rebuild: () => void): HTMLElement {
 
 // ---------- layer editor ----------
 
+function chipGroup(label: string, chips: HTMLElement[], hint?: string): HTMLElement {
+  return el('div', { class: 'group' }, [
+    el('span', { class: 'field-label', text: label }),
+    el('div', { class: 'chips' }, chips),
+    hint ? el('span', { class: 'field-hint', text: hint }) : null,
+  ]);
+}
+
 function buildLayerEditor(rebuild: () => void): HTMLElement {
   const l = lay();
   const e = env();
   const body: HTMLElement[] = [];
 
   body.push(
-    el('div', { class: 'row' }, [
+    chipGroup('source', [
       ...(['tone', 'noise'] as const).map((k) =>
         chip(k, {
           active: l.kind === k,
@@ -434,7 +442,8 @@ function buildLayerEditor(rebuild: () => void): HTMLElement {
 
   if (l.kind === 'noise') {
     body.push(
-      el('div', { class: 'chips', style: { marginTop: 'var(--s3)' } },
+      chipGroup(
+        'colour',
         NOISE_COLORS.map((c: NoiseColor) =>
           chip(c, {
             active: l.color === c,
@@ -445,28 +454,41 @@ function buildLayerEditor(rebuild: () => void): HTMLElement {
             },
           }),
         ),
+        NOISE_NOTES[l.color],
       ),
-      el('p', { class: 'field-hint', text: NOISE_NOTES[l.color] }),
     );
   } else {
     body.push(
-      el('div', { style: { marginTop: 'var(--s3)' } }, [
-        methodChips(l.method === 'tone' ? '' : l.method, (m: Method) => {
-          l.method = m;
-          commit(rebuild);
-        }),
-      ]),
-      el('div', { class: 'row', style: { marginTop: 'var(--s2)' } }, [
-        chip('no beat (drone)', {
-          active: l.method === 'tone',
-          hint: 'a plain tone — use these as partials in a stack',
-          onclick: () => {
-            l.method = 'tone';
-            commit(rebuild);
-          },
-        }),
-      ]),
-      el('div', { class: 'chips', style: { marginTop: 'var(--s3)' } },
+      chipGroup(
+        'delivery',
+        [
+          ...(['binaural', 'monaural', 'isochronic'] as Method[]).map((m) =>
+            chip(m, {
+              active: l.method === m,
+              hint:
+                m === 'binaural'
+                  ? 'one tone per ear — needs headphones'
+                  : m === 'monaural'
+                    ? 'the beat is really in the air — speakers fine'
+                    : 'a pulsed tone — the most assertive, speakers fine',
+              onclick: () => {
+                l.method = m;
+                commit(rebuild);
+              },
+            }),
+          ),
+          chip('drone', {
+            active: l.method === 'tone',
+            hint: 'no beat at all — use these as partials in a stack',
+            onclick: () => {
+              l.method = 'tone';
+              commit(rebuild);
+            },
+          }),
+        ],
+      ),
+      chipGroup(
+        'waveform',
         (['sine', 'triangle', 'square', 'sawtooth', 'custom'] as WaveKind[]).map((w) =>
           chip(w, {
             active: l.wave.kind === w,
@@ -476,6 +498,7 @@ function buildLayerEditor(rebuild: () => void): HTMLElement {
             },
           }),
         ),
+        l.wave.kind === 'custom' ? undefined : 'sine is the honest one: a single frequency and nothing else',
       ),
       l.wave.kind === 'custom' ? buildHarmonics(l, rebuild) : el('div'),
       field({
