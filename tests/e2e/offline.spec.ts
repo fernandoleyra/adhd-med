@@ -39,7 +39,7 @@ test.describe('airplane mode', () => {
 
     await page.goto('./#/dj');
     await dismissLeaflet(page);
-    await page.getByRole('button', { name: 'Play something' }).click();
+    await page.locator('.commit button.primary').click();
     const status = await page.evaluate(async () => {
       await new Promise((r) => setTimeout(r, 800));
       return window.adhdmed.engine.snapshot().status;
@@ -70,8 +70,9 @@ test.describe('airplane mode', () => {
     await context.setOffline(true);
     await page.goto('./#/dj');
     await dismissLeaflet(page);
-    await page.getByRole('textbox', { name: /Tell the DJ/i }).fill('cannot settle, need to read');
-    await page.getByRole('button', { name: 'Ask the DJ' }).click();
+    await page.getByRole('button', { name: 'AI set' }).click();
+    await page.getByRole('textbox', { name: /where you are/i }).fill('cannot settle, need to read');
+    await page.locator('.commit button.primary').click();
     await expect(page.locator('.badge').filter({ hasText: /offline/ }).first()).toBeVisible();
     await context.setOffline(false);
   });

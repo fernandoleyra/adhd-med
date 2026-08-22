@@ -43,7 +43,7 @@ import {
   toggle,
 } from '../ui/dom.js';
 import { copyShare, playScript, segmentSummary } from '../ui/player.js';
-import { drawTimeline, fitCanvas, readInk } from '../viz/marks.js';
+import { contentWidth, drawTimeline, fitCanvas, readInk } from '../viz/marks.js';
 import { moireAngle } from '../viz/geometry.js';
 import { shareUrl } from '../core/codec.js';
 
@@ -1007,7 +1007,7 @@ let stripCanvas: HTMLCanvasElement | null = null;
 
 function stripDirty(): void {
   if (!stripCanvas) return;
-  const w = stripCanvas.parentElement?.clientWidth ?? 320;
+  const w = contentWidth(stripCanvas.parentElement);
   drawTimeline(stripCanvas, cleanScript(current), { width: w, height: 108, labels: true, active: segIndex });
 }
 

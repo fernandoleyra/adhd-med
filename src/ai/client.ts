@@ -49,6 +49,9 @@ export interface AiRequest {
   apiKey: string;
   model: string;
   proxyUrl?: string;
+  /** a carrier the listener chose, and how they arrived at it */
+  root?: number;
+  rootFrom?: string;
 }
 
 interface AiSegment {
@@ -58,6 +61,7 @@ interface AiSegment {
   beat: number;
   beatTo: number;
   carrier: number;
+  carrierTo?: number;
   method: 'binaural' | 'monaural' | 'isochronic';
   noise: number;
   noiseColor: 'pink' | 'brown' | 'white' | 'blue' | 'violet' | 'grey';
@@ -78,28 +82,63 @@ export class AiError extends Error {
   }
 }
 
-/** Map the model's answer onto real layers. The physics stays ours. */
+/**
+ * Map the model's answer onto real layers.
+ *
+ * The model chooses the arc; the movement is ours. It answers with numbers at
+ * the ends of each segment, and this turns that into something that plays like
+ * a set rather than a list of holds: the beat is stitched so one segment starts
+ * where the last ended, carriers glide, the bed breathes in and out, and a long
+ * body segment gets a slow tremolo and a quiet fifth above it so there is
+ * always something moving to notice. Every number still goes through the
+ * validator afterwards.
+ */
 export function aiSessionToScript(session: AiSession, seedText: string): Script {
-  const segments = session.segments.slice(0, 12).map((s) => {
-    const main: Layer = layer({
-      method: s.method,
-      carrier: s.carrier,
-      beat: s.beat,
-      gain: 0.55,
-    });
-    if (Number.isFinite(s.beatTo) && Math.abs(s.beatTo - s.beat) > 0.05) {
-      main.mods.push({ target: 'beat', from: s.beat, to: s.beatTo, curve: 'sine' });
+  const list = session.segments.slice(0, 12);
+  const last = list.length - 1;
+  let carry: number | null = null;
+
+  const segments = list.map((s, i) => {
+    const dur = Math.round(Math.max(20, Math.min(3600, s.minutes * 60)));
+    // No jump cuts: a segment opens on the beat the previous one closed with,
+    // whatever the model said, and still lands where the model aimed.
+    const from = carry ?? s.beat;
+    const to = Number.isFinite(s.beatTo) ? s.beatTo : s.beat;
+    carry = to;
+
+    const main: Layer = layer({ method: s.method, carrier: s.carrier, beat: from, gain: 0.55 });
+    if (Math.abs(to - from) > 0.05) {
+      main.mods.push({ target: 'beat', from, to, curve: 'sine' });
     }
+    const carrierTo = Number.isFinite(s.carrierTo) ? (s.carrierTo as number) : s.carrier;
+    if (Math.abs(carrierTo - s.carrier) > 0.5) {
+      main.mods.push({ target: 'carrier', from: s.carrier, to: carrierTo, curve: 'sine' });
+    }
+    // A slow amplitude sway, an eighth of the beat, on segments long enough for
+    // it to read as movement rather than a wobble. Well under the beat itself,
+    // so it never competes with what the session is for.
+    const body = i > 0 && i < last;
+    if (body && dur >= 240) {
+      main.am = { rate: Math.max(0.02, Math.min(0.5, to / 8)), depth: 0.1, wave: 'sine' };
+    }
+
     const layers = [main];
-    if (s.noise > 0.01) {
-      layers.push(layer({ kind: 'noise', method: 'tone', color: s.noiseColor, gain: Math.min(0.35, s.noise) }));
+    // A quiet fifth above the carrier: the same beat, a fuller sound. Only in
+    // the body, where a listener has settled and can take the extra weight.
+    if (body) {
+      layers.push(layer({ method: s.method, carrier: s.carrier, beat: from, ratio: 1.5, gain: 0.14 }));
     }
-    return {
-      dur: Math.round(Math.max(20, Math.min(3600, s.minutes * 60))),
-      label: s.label,
-      why: s.why,
-      layers,
-    };
+    if (s.noise > 0.01) {
+      const bed = Math.min(0.35, s.noise);
+      const noise = layer({ kind: 'noise', method: 'tone', color: s.noiseColor, gain: bed });
+      // The bed arrives and leaves rather than switching on: up on the way in,
+      // away on the way out, held through the middle.
+      if (i === 0) noise.mods.push({ target: 'gain', from: 0, to: bed, curve: 'sine' });
+      else if (i === last) noise.mods.push({ target: 'gain', from: bed, to: 0, curve: 'sine' });
+      layers.push(noise);
+    }
+
+    return { dur, label: s.label, why: s.why, layers };
   });
 
   return cleanScript({

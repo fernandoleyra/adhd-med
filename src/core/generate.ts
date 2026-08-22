@@ -183,6 +183,12 @@ export interface GenerateOptions {
   /** headphones off → speaker-safe delivery */
   method?: Method;
   title?: string;
+  /**
+   * Move the whole arc to a different carrier — from a colour, a constant, a
+   * word. The arc's own carrier movement is preserved, scaled around this root,
+   * because the shape is the part with evidence behind it.
+   */
+  root?: number;
 }
 
 interface MoodEffect {
@@ -249,6 +255,10 @@ export function generate(options: GenerateOptions): Script {
   const random = rng(seed);
   const method: Method = options.method ?? 'binaural';
 
+  // A root retunes the arc without reshaping it: 220 Hz is what the stages are
+  // written around, so the ratio is the scale.
+  const rootScale = options.root && options.root > 20 ? options.root / 220 : 1;
+
   const stages: Stage[] = [...arc.stages];
   if (effect.alphaPrelude) {
     stages.unshift({
@@ -288,7 +298,7 @@ export function generate(options: GenerateOptions): Script {
         why: p === 0 ? stage.why : `${stage.why} — second pass, slightly drifted`,
         layers: stageLayers(stage, {
           method,
-          carrierScale: effect.carrierScale * (p === 1 ? 1.02 : 1),
+          carrierScale: effect.carrierScale * rootScale * (p === 1 ? 1.02 : 1),
           beatShift: effect.beatShift,
           noiseBonus: effect.noiseBonus,
           jitter,
@@ -307,7 +317,7 @@ export function generate(options: GenerateOptions): Script {
     note: `${arc.note}${moodText}`,
     seed,
     origin: 'dj',
-    segments: segments.length ? segments : [{ dur: 300, label: 'hold', layers: stageLayers(arc.stages[0]!, { method, carrierScale: 1, beatShift: 0, noiseBonus: 0, jitter: 0 }) }],
+    segments: segments.length ? segments : [{ dur: 300, label: 'hold', layers: stageLayers(arc.stages[0]!, { method, carrierScale: rootScale, beatShift: 0, noiseBonus: 0, jitter: 0 }) }],
   });
 }
 

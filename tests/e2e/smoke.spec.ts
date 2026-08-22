@@ -52,6 +52,37 @@ test.describe('the app works on a phone', () => {
     expect(missing).toEqual([]);
   });
 
+  /**
+   * A canvas was sized from its card's clientWidth, which includes the padding,
+   * so every session timeline was two paddings too wide and ran off the right of
+   * the screen. Measure, don't eyeball.
+   */
+  test('nothing drawn spills out of the page', async ({ page }) => {
+    for (const route of ['/dj', '/logos', '/lab'] as const) {
+      await gotoRoute(page, route);
+      if (route === '/dj') await page.locator('.commit button.primary').click();
+      await page.waitForTimeout(200);
+      const spills = await page.evaluate(() => {
+        const bad: string[] = [];
+        const doc = document.documentElement.clientWidth;
+        document.querySelectorAll<HTMLCanvasElement>('canvas').forEach((c) => {
+          const r = c.getBoundingClientRect();
+          if (r.width === 0) return;
+          if (r.right > doc + 0.5) bad.push(`${c.className || 'canvas'} ends at ${r.right.toFixed(1)} of ${doc}`);
+          const parent = c.parentElement;
+          if (parent && parent.id !== 'shell') {
+            const pr = parent.getBoundingClientRect();
+            if (r.right > pr.right + 0.5) bad.push(`${c.className || 'canvas'} overflows its parent`);
+          }
+        });
+        // and the page itself never scrolls sideways
+        if (document.documentElement.scrollWidth > doc + 0.5) bad.push('the document scrolls sideways');
+        return bad;
+      });
+      expect(spills, `on ${route}`).toEqual([]);
+    }
+  });
+
   test('every mode renders', async ({ page }) => {
     await page.goto('./');
     await dismissLeaflet(page);
@@ -87,12 +118,17 @@ test.describe('the app works on a phone', () => {
     await expect(sheet).toContainText('Söderlund');
   });
 
-  test('the scripted DJ builds a session and plays it', async ({ page }) => {
+  test('the quick path plays what its chips say', async ({ page }) => {
     await gotoRoute(page, '/dj');
     await page.getByRole('button', { name: 'Focus', exact: true }).click();
-    await page.getByRole('button', { name: '25 min' }).click();
-    // One tap makes sound: the card below is what is already playing.
-    await page.getByRole('button', { name: 'Play something' }).click();
+    await page.getByRole('button', { name: 'restless' }).click();
+    await page.getByRole('button', { name: '25 min', exact: true }).click();
+
+    // The action carries the choices, so you can see what will play before it
+    // does — this was the complaint the two paths exist to answer.
+    const play = page.locator('.commit button.primary');
+    await expect(play).toContainText('Focus · restless · 25 min');
+    await play.click();
     await expect(page.locator('#mini')).toHaveClass(/is-on/);
 
     const card = page.locator('.card').first();
@@ -121,14 +157,62 @@ test.describe('the app works on a phone', () => {
     expect(state.energy).toBeGreaterThan(0.001);
   });
 
-  test('the DJ falls back to the scripted generator with no key', async ({ page }) => {
+  test('the two paths are different things, and the app remembers which', async ({ page }) => {
     await gotoRoute(page, '/dj');
-    const field = page.getByRole('textbox', { name: /Tell the DJ/i });
-    await field.fill('wired from coffee, need to write for an hour');
-    // Typing turns the same button into the conversational one.
-    await page.getByRole('button', { name: 'Ask the DJ' }).click();
+    // Quick is the default: it works with no network at all.
+    await expect(page.getByRole('button', { name: 'Quick' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.commit button.primary')).toContainText('min');
+
+    await page.getByRole('button', { name: 'AI set' }).click();
+    await expect(page.getByRole('button', { name: 'AI set' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.commit button.primary')).toContainText('DJ a set');
+    // Goal, feel and time belong to Quick; this path takes words and a colour.
+    await expect(page.getByRole('button', { name: 'Deep work' })).toBeHidden();
+    await expect(page.getByRole('textbox', { name: /where you are/i })).toBeVisible();
+
+    await page.reload();
+    await dismissLeaflet(page);
+    await expect(page.getByRole('button', { name: 'AI set' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('the AI set falls back to the scripted DJ with no key, and says so', async ({ page }) => {
+    await gotoRoute(page, '/dj');
+    await page.getByRole('button', { name: 'AI set' }).click();
+    await page.getByRole('textbox', { name: /where you are/i }).fill('wired from coffee, need to write for an hour');
+    await page.locator('.commit button.primary').click();
     await expect(page.locator('.badge').filter({ hasText: /^scripted/ }).first()).toBeVisible();
     await expect(page.locator('.card').first()).toContainText(/Deep Work|Deep work/i);
+  });
+
+  test('a colour is an input on its own, and shows its arithmetic', async ({ page }) => {
+    await gotoRoute(page, '/dj');
+    await page.getByRole('button', { name: 'AI set' }).click();
+    await page.getByRole('button', { name: 'violet' }).click();
+
+    // Light is a frequency; the only step taken is halving it into hearing.
+    await expect(page.locator('.block').filter({ hasText: 'COLOUR' })).toContainText(/violet · 4\d\d nm · 1\d\d\.\d\d Hz/);
+
+    await page.locator('.commit button.primary').click();
+    const carrier = await page.evaluate(() => {
+      const script = window.adhdmed.engine.snapshot().script!;
+      return script.segments[0]!.layers[0]!.carrier;
+    });
+    // The arc keeps its shape, retuned around the colour's carrier rather than
+    // the 220 Hz the stages are written at.
+    expect(carrier).toBeGreaterThan(120);
+    expect(carrier).toBeLessThan(200);
+  });
+
+  test('the orb says whether a model will answer', async ({ page }) => {
+    await gotoRoute(page, '/dj');
+    const orb = page.locator('.orb');
+    await expect(orb).toBeVisible();
+    await expect(orb.locator('canvas')).toBeVisible();
+    // On a preview build there is no hosted route, so the dot is dark until a
+    // key or a deployment provides one.
+    await expect(orb).toHaveAttribute('aria-label', /AI ·|scripted/);
+    await orb.click();
+    await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible();
   });
 
   test('the codex is a scannable list, with the arithmetic one tap in', async ({ page }) => {
@@ -187,8 +271,8 @@ test.describe('the app works on a phone', () => {
   test('a session built by the DJ opens in the Lab intact', async ({ page }) => {
     await gotoRoute(page, '/dj');
     await page.getByRole('button', { name: 'Calm', exact: true }).click();
-    await page.getByRole('button', { name: '15 min' }).click();
-    await page.getByRole('button', { name: 'Play something' }).click();
+    await page.getByRole('button', { name: '15 min', exact: true }).click();
+    await page.locator('.commit button.primary').click();
     await page.getByRole('button', { name: 'Open in Lab' }).first().click();
     await expect(page.getByRole('textbox', { name: 'Session title' })).toHaveValue(/Calm/);
     await expect(page.getByRole('heading', { name: 'Timeline' })).toBeVisible();

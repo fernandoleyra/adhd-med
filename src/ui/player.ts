@@ -16,9 +16,32 @@ import {
 } from '../core/types.js';
 import { shareUrl } from '../core/codec.js';
 import { store } from '../store.js';
-import { drawHeatmap, drawTimeline } from '../viz/marks.js';
+import { contentWidth, drawHeatmap, drawTimeline } from '../viz/marks.js';
 import { drawWordSigil } from '../viz/marks.js';
 import { chip, clear, el, field, formatClock, formatMinutes, num, openSheet, toast, toggle } from './dom.js';
+
+type Repaintable = HTMLCanvasElement & { paint?: () => void };
+
+/**
+ * Redraw a canvas when the window changes size. One shared listener, because
+ * some modes rebuild their card on every keystroke and a per-card
+ * ResizeObserver would accumulate; a canvas that has left the document is no
+ * longer found by the query.
+ */
+function repaintOnResize(canvas: HTMLCanvasElement, paint: () => void): void {
+  (canvas as Repaintable).paint = paint;
+  canvas.classList.add('repaint');
+}
+
+let repaintQueued = false;
+window.addEventListener('resize', () => {
+  if (repaintQueued) return;
+  repaintQueued = true;
+  requestAnimationFrame(() => {
+    repaintQueued = false;
+    document.querySelectorAll<Repaintable>('canvas.repaint').forEach((c) => c.paint?.());
+  });
+});
 
 export function announce(text: string): void {
   const live = document.getElementById('live');
@@ -95,12 +118,15 @@ export function sessionCard(script: Script, opts: CardOptions = {}): HTMLElement
     ]),
   ]);
 
-  // Canvases need layout before they can be sized.
-  requestAnimationFrame(() => {
-    const w = strip.parentElement?.clientWidth ?? 320;
+  // Canvases need layout before they can be sized, and again whenever the
+  // layout changes under them — a phone turning sideways is the common case.
+  const paint = () => {
+    const w = contentWidth(card);
     drawTimeline(strip, script, { width: w, height: 116, labels: true });
     drawHeatmap(heat, script, w, 72);
-  });
+  };
+  requestAnimationFrame(paint);
+  repaintOnResize(strip, paint);
   return card;
 }
 
@@ -279,7 +305,7 @@ export function openSession(): void {
         ]),
       );
     });
-    const w = strip.parentElement?.clientWidth ?? 320;
+    const w = contentWidth(strip.parentElement);
     drawTimeline(strip, s.script, { width: w, height: 116, labels: true, position: s.position, active: s.segIndex });
   });
 }

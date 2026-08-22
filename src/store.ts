@@ -18,6 +18,8 @@ export interface Settings {
   model: string;
   proxyUrl: string;
   wakeLock: boolean;
+  /** which of the DJ's two paths you were last on */
+  djPath: 'quick' | 'set';
 }
 
 export interface SavedSession {
@@ -57,6 +59,7 @@ const DEFAULTS: State = {
     model: 'openrouter/free',
     proxyUrl: '',
     wakeLock: false,
+    djPath: 'quick',
   },
   saved: [],
 };
