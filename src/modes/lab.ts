@@ -1071,7 +1071,7 @@ export function renderLab(host: HTMLElement): void {
       section('Lab', [
         stripCanvas,
         el('div', { class: 'spread' }, [
-          el('span', { class: 'field-hint', text: `${current.segments.length} segments · ${formatMinutes(totalSeconds(current))} · ${segmentSummary(s)}` }),
+          el('span', { class: 'field-hint', text: `${current.segments.length} segment${current.segments.length === 1 ? '' : 's'} · ${formatMinutes(totalSeconds(current))} · ${segmentSummary(s)}` }),
           el('span', { class: 'field-hint', text: current.unsafe ? 'experimental' : 'tested range' }),
         ]),
         el('div', { class: 'row', style: { marginTop: 'var(--s3)' } }, [

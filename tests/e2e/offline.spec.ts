@@ -40,7 +40,6 @@ test.describe('airplane mode', () => {
     await page.goto('./#/dj');
     await dismissLeaflet(page);
     await page.getByRole('button', { name: 'Play something' }).click();
-    await page.getByRole('button', { name: 'Begin' }).first().click();
     const status = await page.evaluate(async () => {
       await new Promise((r) => setTimeout(r, 800));
       return window.adhdmed.engine.snapshot().status;

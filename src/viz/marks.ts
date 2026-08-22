@@ -268,15 +268,16 @@ export function drawTimeline(canvas: HTMLCanvasElement, script: Script, opts: Ti
   });
   ctx.stroke();
 
-  // Active segment underline.
-  if (opts.active !== undefined && script.segments[opts.active]) {
+  // Active-segment underline. Skipped for a single segment, where a full-width
+  // rule reads as a chart border rather than a marker.
+  if (opts.active !== undefined && script.segments.length > 1 && script.segments[opts.active]) {
     const s = starts[opts.active]!;
     const e = s + script.segments[opts.active]!.dur;
-    ctx.strokeStyle = ink.accent;
+    ctx.strokeStyle = gradient(ctx, ink, x(s), 0, x(e), 0);
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(x(s), padT + h + 3);
-    ctx.lineTo(x(e), padT + h + 3);
+    ctx.moveTo(x(s) + 1, padT + h + 3);
+    ctx.lineTo(x(e) - 1, padT + h + 3);
     ctx.stroke();
   }
 

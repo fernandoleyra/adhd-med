@@ -178,7 +178,7 @@ export function openSession(): void {
     max: 1,
     unit: '%',
     format: (v) => String(Math.round(v * 100)),
-    hint: 'Louder is not stronger. A limiter sits after this, always.',
+    hint: 'louder is not stronger',
     oninput: (v) => {
       engine.setVolume(v);
       store.update({ volume: v });

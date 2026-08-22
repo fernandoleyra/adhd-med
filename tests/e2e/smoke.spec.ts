@@ -59,17 +59,16 @@ test.describe('the app works on a phone', () => {
     await gotoRoute(page, '/dj');
     await page.getByRole('button', { name: 'Focus', exact: true }).click();
     await page.getByRole('button', { name: '25 min' }).click();
-    // One primary action: with an empty field it builds from the chips.
+    // One tap makes sound: the card below is what is already playing.
     await page.getByRole('button', { name: 'Play something' }).click();
+    await expect(page.locator('#mini')).toHaveClass(/is-on/);
 
     const card = page.locator('.card').first();
     await expect(card).toContainText('Focus');
     await expect(card).toContainText('onset');
     await expect(card).toContainText('pre-task exposure');
     await expect(card).toContainText('headphones');
-
-    await page.getByRole('button', { name: 'Begin' }).first().click();
-    await expect(page.locator('#mini')).toHaveClass(/is-on/);
+    await expect(card.getByRole('button', { name: 'Restart' })).toBeVisible();
 
     const state = await page.evaluate(async () => {
       await new Promise((r) => setTimeout(r, 1200));

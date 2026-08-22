@@ -42,13 +42,18 @@ export function renderDj(host: HTMLElement): void {
   const state: DjState = { text: '', goal: 'focus', moods: [], minutes: 25, busy: false };
   const result = el('div');
 
+  /**
+   * Show the session and start it. One tap should make sound: the card below is
+   * what you are already hearing, not a form to submit.
+   */
   const show = (script: ReturnType<typeof generate>, badge?: string) => {
+    playScript(script);
     clear(result);
     result.append(
       sessionCard(script, {
         detail: true,
         onplay: () => playScript(script),
-        actionLabel: 'Begin',
+        actionLabel: 'Restart',
         extra: [
           el('button', {
             class: 'ghost',
