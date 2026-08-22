@@ -124,17 +124,24 @@ export function buildVoice(l: Layer, o: BuildOptions): VoiceHandle | null {
   const stopAt = t0 + span + 0.2;
   const started: { start(t: number): void; stop(t: number): void }[] = [];
 
-  const gainNode = ctx.createGain();
-  apply(gainNode.gain, resolve('gain'), t0, span);
+  /**
+   * Automation runs over the segment's remaining length. `span` can be longer —
+   * it carries the crossfade overlap into the next segment — and stretching a
+   * curve across that would run every sweep slightly slow, badly so on short
+   * segments. Past the curve, the parameter holds its final value.
+   */
+  const curveSpan = Math.max(0.05, Math.min(span, seg.dur - offset));
 
-  let tail: AudioNode = gainNode;
+  const gainNode = ctx.createGain();
+  apply(gainNode.gain, resolve('gain'), t0, curveSpan);
+
   gainNode.connect(dest);
 
   const pan = resolve('pan');
   let head: AudioNode = gainNode;
   if (firstValue(pan) !== 0 || isCurve(pan)) {
     const panner = ctx.createStereoPanner();
-    apply(panner.pan, pan, t0, span);
+    apply(panner.pan, pan, t0, curveSpan);
     panner.connect(head);
     head = panner;
   }
@@ -142,14 +149,14 @@ export function buildVoice(l: Layer, o: BuildOptions): VoiceHandle | null {
   if (l.filter) {
     const filter = ctx.createBiquadFilter();
     filter.type = l.filter.kind;
-    apply(filter.frequency, resolve('filterFreq'), t0, span);
+    apply(filter.frequency, resolve('filterFreq'), t0, curveSpan);
     filter.Q.value = l.filter.q;
     filter.connect(head);
     head = filter;
   }
 
   if (l.am && l.am.depth > 0) {
-    const am = buildModulator(ctx, l.am.wave, resolve('amRate'), resolve('amDepth'), t0, span, stopAt);
+    const am = buildModulator(ctx, l.am.wave, resolve('amRate'), resolve('amDepth'), t0, curveSpan, stopAt);
     am.node.connect(head);
     head = am.node;
     started.push(...am.nodes);
@@ -163,7 +170,6 @@ export function buildVoice(l: Layer, o: BuildOptions): VoiceHandle | null {
     src.start(t0, (offset * 0.37) % 10);
     src.stop(stopAt);
     started.push(src);
-    void tail;
     return { stop: (when) => stopAll(started, when) };
   }
 
@@ -176,7 +182,7 @@ export function buildVoice(l: Layer, o: BuildOptions): VoiceHandle | null {
   const isoDepth = 1;
   let toneHead = head;
   if (l.method === 'isochronic') {
-    const gate = buildModulator(ctx, 'sine', beat, isoDepth, t0, span, stopAt);
+    const gate = buildModulator(ctx, 'sine', beat, isoDepth, t0, curveSpan, stopAt);
     gate.node.connect(toneHead);
     toneHead = gate.node;
     started.push(...gate.nodes);
@@ -186,7 +192,7 @@ export function buildVoice(l: Layer, o: BuildOptions): VoiceHandle | null {
   const makeOsc = (freq: Resolved, destination: AudioNode, detuneCents = 0) => {
     const osc = ctx.createOscillator();
     setWave(osc, ctx, l);
-    apply(osc.frequency, freq, t0, span);
+    apply(osc.frequency, freq, t0, curveSpan);
     if (detuneCents !== 0) osc.detune.value = detuneCents;
     osc.connect(destination);
     osc.start(t0);
@@ -220,9 +226,9 @@ export function buildVoice(l: Layer, o: BuildOptions): VoiceHandle | null {
   if (l.fm && l.fm.depth > 0) {
     const lfo = ctx.createOscillator();
     lfo.type = l.fm.wave;
-    apply(lfo.frequency, resolve('fmRate'), t0, span);
+    apply(lfo.frequency, resolve('fmRate'), t0, curveSpan);
     const depth = ctx.createGain();
-    apply(depth.gain, resolve('fmDepth'), t0, span);
+    apply(depth.gain, resolve('fmDepth'), t0, curveSpan);
     lfo.connect(depth);
     for (const osc of oscs) depth.connect(osc.frequency);
     lfo.start(t0);
