@@ -122,3 +122,26 @@ describe('automation', () => {
     expect(envelopeFor({ unsafe: true }).beat[1]).toBeGreaterThan(envelopeFor({}).beat[1]);
   });
 });
+
+describe('regressions', () => {
+  it('steps halfway through, not on the last sample', () => {
+    const l = layer({ beat: 10, mods: [{ target: 'beat', from: 10, to: 20, curve: 'step' }] });
+    const plans = planMods(l, TESTED);
+    expect(valueAt(10, plans.get('beat'), 0, 100, 1)).toBe(10);
+    expect(valueAt(10, plans.get('beat'), 49, 100, 1)).toBe(10);
+    expect(valueAt(10, plans.get('beat'), 51, 100, 1)).toBe(20);
+    expect(valueAt(10, plans.get('beat'), 100, 100, 1)).toBe(20);
+  });
+
+  it('reports which targets are automated, so a zero-depth modulator can still be faded in', () => {
+    const l = layer({ am: { rate: 4, depth: 0, wave: 'sine' }, mods: [{ target: 'amDepth', from: 0, to: 1 }] });
+    const plans = planMods(l, TESTED);
+    expect(plans.has('amDepth')).toBe(true);
+    const curve = resolveTarget(l, 'amDepth', plans, 60, 0, 1);
+    expect(isCurve(curve)).toBe(true);
+    if (isCurve(curve)) {
+      expect(curve[0]).toBeCloseTo(0, 4);
+      expect(curve.at(-1)).toBeCloseTo(1, 4);
+    }
+  });
+});

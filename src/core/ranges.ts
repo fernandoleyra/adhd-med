@@ -258,6 +258,9 @@ export function auditScript(script: Script): string[] {
       if (l.beat > TESTED.beat[1]) notes.push(`beat ${l.beat.toFixed(1)} Hz is past the researched range`);
       if (l.carrier * l.ratio > 4000) notes.push('a layer sounds above 4 kHz — keep the volume low');
       if (l.carrier * l.ratio < 30 && l.kind === 'tone') notes.push('a layer sounds below 30 Hz — mostly inaudible on phone speakers');
+      if (l.method === 'binaural' && Math.abs(l.pan) > 0.75) {
+        notes.push('a binaural layer is balanced hard to one side — the quiet ear carries little, so the beat fades with it');
+      }
     }
     loudest = Math.max(loudest, sum);
   }

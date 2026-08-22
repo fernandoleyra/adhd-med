@@ -9,9 +9,10 @@
  */
 import { engine } from '../audio/engine.js';
 import { NOISE_COLORS, NOISE_NOTES } from '../audio/noise.js';
+import { baseValue } from '../core/automation.js';
 import { compile, EXPR_VOCAB } from '../core/expr.js';
 import { HARMONIC_SERIES, JUST_MAJOR, JUST_PENTATONIC, BANDS } from '../core/octave.js';
-import { cleanScript, envelopeFor, OPEN, TESTED, type Envelope } from '../core/ranges.js';
+import { cleanScript, envelopeFor, MOD_RANGE, OPEN, TESTED, type Envelope } from '../core/ranges.js';
 import { hashString, rng, seedWord } from '../core/rng.js';
 import {
   layer,
@@ -268,9 +269,36 @@ function buildHarmonics(l: Layer, rebuild: () => void): HTMLElement {
 
 const MOD_TARGETS: ModTarget[] = ['beat', 'carrier', 'ratio', 'gain', 'pan', 'filterFreq', 'amRate', 'amDepth', 'fmRate', 'fmDepth'];
 
+/** Frequency-ish targets get a logarithmic slider; the rest are linear. */
+const LOG_TARGETS = new Set<ModTarget>(['beat', 'carrier', 'filterFreq', 'amRate', 'fmRate', 'fmDepth']);
+
+/**
+ * Only offer what this layer actually has. A filterFreq mod on a layer with no
+ * filter, or an amDepth mod with no modulator, would be a control that does
+ * nothing — worse than a missing one.
+ */
+function targetsFor(l: Layer): ModTarget[] {
+  return MOD_TARGETS.filter((t) => {
+    if (t === 'filterFreq') return Boolean(l.filter);
+    if (t === 'amRate' || t === 'amDepth') return Boolean(l.am);
+    if (t === 'fmRate' || t === 'fmDepth') return Boolean(l.fm);
+    if (l.kind === 'noise') return t === 'gain' || t === 'pan';
+    if (t === 'beat') return l.method !== 'tone';
+    return true;
+  });
+}
+
+function unitFor(target: ModTarget): string | undefined {
+  if (target === 'beat' || target === 'carrier' || target === 'filterFreq' || target === 'amRate' || target === 'fmRate' || target === 'fmDepth') return 'Hz';
+  if (target === 'gain' || target === 'amDepth') return '%';
+  return undefined;
+}
+
 function buildMods(l: Layer, rebuild: () => void): HTMLElement {
   const list = el('div');
+  const targets = targetsFor(l);
   l.mods.forEach((mod, i) => {
+    const range = env()[MOD_RANGE[mod.target]] as [number, number];
     const exprInput = el('input', {
       type: 'text',
       class: 'mono',
@@ -306,39 +334,45 @@ function buildMods(l: Layer, rebuild: () => void): HTMLElement {
             }, ['remove']),
           ]),
         ]),
-        select('drives', MOD_TARGETS.map((t) => ({ value: t, label: t })), mod.target, (v) => {
+        select('drives', targets.map((t) => ({ value: t, label: t })), mod.target, (v) => {
           mod.target = v;
+          // The new target has its own range, so re-anchor the sweep to the
+          // layer's current value rather than clamping the old numbers into it.
+          mod.from = baseValue(l, v);
+          mod.to = baseValue(l, v);
           commit(rebuild);
         }),
-        el('div', { class: 'row' }, [
-          field({
-            label: 'from',
-            value: mod.from ?? 0,
-            min: -100,
-            max: 1000,
-            oninput: (v) => {
-              mod.from = v;
-            },
-          }),
-        ]),
-        el('div', { class: 'row' }, [
-          field({
-            label: 'to',
-            value: mod.to ?? 0,
-            min: -100,
-            max: 1000,
-            oninput: (v) => {
-              mod.to = v;
-            },
-          }),
-        ]),
+        field({
+          label: 'from',
+          value: mod.from ?? range[0],
+          min: range[0],
+          max: range[1],
+          unit: unitFor(mod.target),
+          log: LOG_TARGETS.has(mod.target) && range[0] > 0,
+          format: unitFor(mod.target) === '%' ? (v) => String(Math.round(v * 100)) : undefined,
+          oninput: (v) => {
+            mod.from = v;
+          },
+        }),
+        field({
+          label: 'to',
+          value: mod.to ?? range[1],
+          min: range[0],
+          max: range[1],
+          unit: unitFor(mod.target),
+          log: LOG_TARGETS.has(mod.target) && range[0] > 0,
+          format: unitFor(mod.target) === '%' ? (v) => String(Math.round(v * 100)) : undefined,
+          oninput: (v) => {
+            mod.to = v;
+          },
+        }),
         select(
           'shape',
           [
             { value: 'lin', label: 'linear' },
             { value: 'sine', label: 'ease' },
             { value: 'exp', label: 'accelerating' },
-            { value: 'step', label: 'step at the end' },
+            { value: 'step', label: 'step halfway' },
           ],
           mod.curve ?? 'lin',
           (v) => {
@@ -371,17 +405,21 @@ function buildMods(l: Layer, rebuild: () => void): HTMLElement {
         class: 'ghost',
         type: 'button',
         onclick: () => {
-          l.mods.push({ target: 'beat', from: l.beat, to: Math.max(0.5, l.beat + 4), curve: 'sine' });
+          const target: ModTarget = targets.includes('beat') ? 'beat' : 'gain';
+          const from = baseValue(l, target);
+          l.mods.push({ target, from, to: target === 'beat' ? Math.max(0.5, from + 4) : from, curve: 'sine' });
           commit(rebuild);
         },
       }, ['Add motion']),
       chip('slow wobble', {
+        hint: 'the beat breathes ±1.5 Hz on a 90-second cycle',
         onclick: () => {
           l.mods.push({ target: 'beat', expr: 'b + 1.5*sin(tau*t/90)' });
           commit(rebuild);
         },
       }),
       chip('stepped', {
+        hint: 'climbs 8 → 20 Hz in 2 Hz steps',
         onclick: () => {
           l.mods.push({ target: 'beat', expr: 'quant(lerp(8,20,u), 2)' });
           commit(rebuild);
@@ -833,7 +871,9 @@ function buildDice(rebuild: () => void): HTMLElement {
         l.beat = Number(jitter(e.beat, l.beat).toFixed(2));
         l.carrier = Number(jitter(e.carrier, l.carrier).toFixed(1));
         l.gain = Number(jitter([0.05, 1], l.gain).toFixed(2));
-        if (random() > 0.7) l.pan = Number((random() * 2 - 1).toFixed(2));
+        // Balance, not hard pan: ±0.6 keeps both ears fed, so a binaural beat
+        // survives a scramble.
+        if (random() > 0.7) l.pan = Number(((random() * 2 - 1) * 0.6).toFixed(2));
       }
     }
     commit(rebuild);
@@ -885,8 +925,11 @@ function buildEnvelope(rebuild: () => void): HTMLElement {
       Boolean(current.unsafe),
       (on) => {
         if (on && !store.settings.experimental) {
+          // Re-render on close so a dismissed sheet leaves the switch showing
+          // the truth, which is still "off".
           openSheet({
             title: 'Leaving the tested range',
+            onclose: () => rebuild(),
             body: [
               el('p', { class: 'lead' }, [
                 'Experimental mode widens every range far past anything in the literature: carriers down to a fraction of a hertz and up past hearing, beats to 400 Hz, deep frequency modulation, sixteen layers at once. You will be able to make sounds nobody has studied. Some of them will be unpleasant.',

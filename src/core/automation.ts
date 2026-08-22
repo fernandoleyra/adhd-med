@@ -35,7 +35,9 @@ function shape(u: number, curve: Mod['curve']): number {
   switch (curve) {
     case 'exp': return u * u;
     case 'sine': return 0.5 - Math.cos(Math.PI * u) / 2;
-    case 'step': return u < 1 ? 0 : 1;
+    // Halfway, not at the very end: stepping on the final sample would land
+    // inside the crossfade and never be heard.
+    case 'step': return u < 0.5 ? 0 : 1;
     default: return u;
   }
 }

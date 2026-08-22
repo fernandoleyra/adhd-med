@@ -158,6 +158,41 @@ test.describe('the app works on a phone', () => {
     await expect(page.getByText('experimental', { exact: false }).first()).toBeVisible();
   });
 
+  test('every control has a name and a big enough target', async ({ page }) => {
+    await page.goto('./');
+    await dismissLeaflet(page);
+    const problems: string[] = [];
+    for (const route of ['dj', 'lab', 'codex', 'logos', 'about']) {
+      await page.goto(`./#/${route}`);
+      await page.waitForTimeout(250);
+      // Open the Lab's folds so the controls inside them are audited too.
+      if (route === 'lab') {
+        for (const fold of ['layers', 'grid', 'numbers', 'dice', 'envelope']) {
+          await page.locator(`details[data-fold="${fold}"] > summary`).click();
+        }
+      }
+      const found = await page.evaluate(() => {
+        const out: string[] = [];
+        const name = (el: Element) =>
+          (el.getAttribute('aria-label') || el.textContent || el.getAttribute('title') || '').trim();
+        const selector = 'button, a, input, select, textarea, [role="slider"], [role="application"]';
+        for (const el of Array.from(document.querySelectorAll(selector))) {
+          if (el.closest('[aria-hidden="true"]')) continue;
+          if (!name(el)) out.push(`unnamed ${el.tagName.toLowerCase()} in .${String(el.parentElement?.className).split(' ')[0]}`);
+          const rect = el.getBoundingClientRect();
+          // WCAG 2.5.8 asks for 24px; inputs are excluded because the switch
+          // input is deliberately hidden behind its 44px label.
+          if (rect.height > 0 && rect.height < 24 && el.tagName !== 'A' && el.tagName !== 'INPUT') {
+            out.push(`${Math.round(rect.height)}px target: ${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]}`);
+          }
+        }
+        return [...new Set(out)];
+      });
+      if (found.length) problems.push(`${route}: ${found.join(' | ')}`);
+    }
+    expect(problems, problems.join('\n')).toEqual([]);
+  });
+
   test('phone screenshots of every mode', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'phone', 'screenshots come from the phone project');
     await page.goto('./');

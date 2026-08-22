@@ -138,8 +138,17 @@ export function buildVoice(l: Layer, o: BuildOptions): VoiceHandle | null {
   gainNode.connect(dest);
 
   const pan = resolve('pan');
+  const panning = firstValue(pan) !== 0 || isCurve(pan);
+  /**
+   * A StereoPannerNode cross-mixes its input: at pan −1 the output is (L+R, 0),
+   * which would fold a binaural pair into one ear and destroy the very
+   * difference the beat is made of. So a binaural layer is balanced at its two
+   * ear gains instead, where each ear keeps its own frequency. (Balance far
+   * enough and one ear does go quiet — auditScript says so.)
+   */
+  const balanceEars = panning && l.kind === 'tone' && l.method === 'binaural';
   let head: AudioNode = gainNode;
-  if (firstValue(pan) !== 0 || isCurve(pan)) {
+  if (panning && !balanceEars) {
     const panner = ctx.createStereoPanner();
     apply(panner.pan, pan, t0, curveSpan);
     panner.connect(head);
@@ -155,7 +164,10 @@ export function buildVoice(l: Layer, o: BuildOptions): VoiceHandle | null {
     head = filter;
   }
 
-  if (l.am && l.am.depth > 0) {
+  // A depth of zero is a legitimate starting point when a mod fades it in, so
+  // the modulator has to exist whenever automation touches it.
+  const amAutomated = plans.has('amDepth') || plans.has('amRate');
+  if (l.am && (l.am.depth > 0 || amAutomated)) {
     const am = buildModulator(ctx, l.am.wave, resolve('amRate'), resolve('amDepth'), t0, curveSpan, stopAt);
     am.node.connect(head);
     head = am.node;
@@ -209,6 +221,12 @@ export function buildVoice(l: Layer, o: BuildOptions): VoiceHandle | null {
     merger.connect(toneHead);
     const left = ctx.createGain();
     const right = ctx.createGain();
+    if (balanceEars) {
+      // Equal-power balance: cos/sin of the same angle, so the pair stays at a
+      // constant loudness as it leans.
+      apply(left.gain, combine(pan, 0, (p) => Math.cos(((p + 1) * Math.PI) / 4)), t0, curveSpan);
+      apply(right.gain, combine(pan, 0, (p) => Math.sin(((p + 1) * Math.PI) / 4)), t0, curveSpan);
+    }
     left.connect(merger, 0, 0);
     right.connect(merger, 0, 1);
     makeOsc(combine(sounding, beat, (f, b) => Math.max(0.01, f - b / 2)), left);
@@ -223,7 +241,8 @@ export function buildVoice(l: Layer, o: BuildOptions): VoiceHandle | null {
     makeOsc(sounding, toneHead);
   }
 
-  if (l.fm && l.fm.depth > 0) {
+  const fmAutomated = plans.has('fmDepth') || plans.has('fmRate');
+  if (l.fm && (l.fm.depth > 0 || fmAutomated)) {
     const lfo = ctx.createOscillator();
     lfo.type = l.fm.wave;
     apply(lfo.frequency, resolve('fmRate'), t0, curveSpan);

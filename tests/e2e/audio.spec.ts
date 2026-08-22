@@ -337,3 +337,151 @@ test.describe('long sessions and seeking', () => {
     expect(result.after).toBeLessThan(result.paused + 3);
   });
 });
+
+test.describe('regressions found in review', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('./');
+    await dismissLeaflet(page);
+  });
+
+  test('resuming after a pause does not stack a second copy of the session', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const engine = window.adhdmed.engine;
+      const analyser = () => engine.analyserL!;
+      const peak = async (rounds = 14) => {
+        const data = new Float32Array(analyser().fftSize);
+        let p = 0;
+        for (let i = 0; i < rounds; i++) {
+          analyser().getFloatTimeDomainData(data);
+          for (const v of data) p = Math.max(p, Math.abs(v));
+          await new Promise((r) => setTimeout(r, 60));
+        }
+        return p;
+      };
+
+      // A steady single-layer session, so the level should not change on its own.
+      window.adhdmed.play({
+        v: 2,
+        title: 'steady',
+        segments: [{ dur: 600, layers: [{ kind: 'tone', method: 'monaural', carrier: 220, beat: 6, gain: 0.6 }] }],
+      } as never);
+      await new Promise((r) => setTimeout(r, 1800));
+      const first = await peak();
+
+      for (let i = 0; i < 3; i++) {
+        await engine.pause();
+        await new Promise((r) => setTimeout(r, 250));
+        await engine.play();
+        await new Promise((r) => setTimeout(r, 900));
+      }
+      const afterThreePauses = await peak();
+      await engine.stop();
+      return { first, afterThreePauses };
+    });
+
+    expect(result.first).toBeGreaterThan(0.05);
+    // Three pause/play cycles used to leave four copies playing at once.
+    expect(result.afterThreePauses).toBeLessThan(result.first * 1.35);
+  });
+
+  test('balancing a binaural layer keeps a different frequency in each ear', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const mag = (data: Float32Array, freq: number, rate: number) => {
+        const k = (2 * Math.PI * freq) / rate;
+        const coeff = 2 * Math.cos(k);
+        let s1 = 0;
+        let s2 = 0;
+        for (let i = 0; i < data.length; i++) {
+          const s0 = data[i]! + coeff * s1 - s2;
+          s2 = s1;
+          s1 = s0;
+        }
+        return Math.sqrt(s1 * s1 + s2 * s2 - coeff * s1 * s2) / data.length;
+      };
+      const buffer = await window.adhdmed.render(
+        {
+          v: 2,
+          title: 'panned binaural',
+          segments: [
+            { dur: 2, layers: [{ kind: 'tone', method: 'binaural', carrier: 200, beat: 10, gain: 1, pan: -0.5 }] },
+          ],
+        } as never,
+        1.5,
+        48000,
+      );
+      const left = buffer.getChannelData(0);
+      const right = buffer.getChannelData(1);
+      const rate = buffer.sampleRate;
+      let peakL = 0;
+      let peakR = 0;
+      for (let i = 0; i < left.length; i++) {
+        peakL = Math.max(peakL, Math.abs(left[i]!));
+        peakR = Math.max(peakR, Math.abs(right[i]!));
+      }
+      return {
+        leftAt195: mag(left, 195, rate),
+        leftAt205: mag(left, 205, rate),
+        rightAt195: mag(right, 195, rate),
+        rightAt205: mag(right, 205, rate),
+        peakL,
+        peakR,
+      };
+    });
+
+    // A StereoPanner would have cross-mixed 205 Hz into the left ear and
+    // emptied the right. The ear balance keeps both frequencies where they were.
+    expect(result.leftAt195).toBeGreaterThan(result.leftAt205 * 5);
+    expect(result.rightAt205).toBeGreaterThan(result.rightAt195 * 5);
+    expect(result.peakR).toBeGreaterThan(0.05); // the quieter ear still sounds
+    expect(result.peakL).toBeGreaterThan(result.peakR); // and the balance leaned left
+  });
+
+  test('a mod can fade in a modulator whose static depth is zero', async ({ page }) => {
+    const spread = await page.evaluate(async () => {
+      const buffer = await window.adhdmed.render(
+        {
+          v: 2,
+          title: 'tremolo fade-in',
+          segments: [
+            {
+              dur: 6,
+              layers: [
+                {
+                  kind: 'tone',
+                  method: 'tone',
+                  carrier: 300,
+                  beat: 0,
+                  gain: 1,
+                  am: { rate: 6, depth: 0, wave: 'sine' },
+                  mods: [{ target: 'amDepth', from: 0, to: 1, curve: 'lin' }],
+                },
+              ],
+            },
+          ],
+        } as never,
+        6,
+        48000,
+      );
+      const data = buffer.getChannelData(0);
+      const rate = buffer.sampleRate;
+      const window_ = Math.floor(rate * 0.01);
+      const envelopeOf = (from: number, to: number) => {
+        const peaks: number[] = [];
+        for (let i = from; i + window_ < to; i += window_) {
+          let p = 0;
+          for (let k = 0; k < window_; k++) p = Math.max(p, Math.abs(data[i + k]!));
+          peaks.push(p);
+        }
+        return { min: Math.min(...peaks), max: Math.max(...peaks) };
+      };
+      const head = envelopeOf(0, Math.floor(rate * 0.5)); // depth still near 0
+      const tail = envelopeOf(rate * 5, rate * 6); // depth ≈ 1: a full gate
+      return { headRange: head.max - head.min, tailRange: tail.max - tail.min };
+    });
+
+    // The claim is the fade: barely modulated at the start, fully gated by the end.
+    expect(spread.headRange).toBeLessThan(0.12);
+    expect(spread.tailRange).toBeGreaterThan(0.5);
+    expect(spread.tailRange).toBeGreaterThan(spread.headRange * 5);
+  });
+});

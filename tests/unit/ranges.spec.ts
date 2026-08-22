@@ -97,3 +97,15 @@ describe('validation and safety ranges', () => {
     expect(soundingFreq(layer({ carrier: 200, ratio: 1.5 }))).toBe(300);
   });
 });
+
+describe('audit notes', () => {
+  it('warns when a binaural layer is balanced hard enough to lose the beat', () => {
+    const hard = cleanScript({ segments: [{ layers: [layer({ method: 'binaural', pan: -0.9 })] }] });
+    expect(auditScript(hard).join(' ')).toMatch(/balanced hard/);
+    const gentle = cleanScript({ segments: [{ layers: [layer({ method: 'binaural', pan: -0.4 })] }] });
+    expect(auditScript(gentle).join(' ')).not.toMatch(/balanced hard/);
+    // panning a speaker-safe layer is unremarkable
+    const mono = cleanScript({ segments: [{ layers: [layer({ method: 'isochronic', pan: -1 })] }] });
+    expect(auditScript(mono).join(' ')).not.toMatch(/balanced hard/);
+  });
+});

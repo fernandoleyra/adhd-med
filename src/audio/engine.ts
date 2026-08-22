@@ -24,7 +24,29 @@ const EXTEND_AT = 600;
 const OUTPUT_CAP = 0.7;
 export const DEFAULT_VOLUME = 0.25;
 
+/** How long a torn-down voice gets to fade, in seconds. */
+const FADE_OUT = 0.04;
+
 export type Status = 'idle' | 'playing' | 'paused';
+
+/** Ramp a gain to silence, then disconnect once the ramp has been heard. */
+function releaseGain(node: GainNode | null, now: number): void {
+  if (!node) return;
+  try {
+    node.gain.cancelScheduledValues(now);
+    node.gain.setValueAtTime(node.gain.value, now);
+    node.gain.linearRampToValueAtTime(0, now + FADE_OUT);
+  } catch {
+    /* the param may already be gone */
+  }
+  window.setTimeout(() => {
+    try {
+      node.disconnect();
+    } catch {
+      /* already disconnected */
+    }
+  }, FADE_OUT * 1000 + 30);
+}
 
 export interface EngineSnapshot {
   status: Status;
@@ -53,6 +75,14 @@ export class Engine {
   private segGains: GainNode[] = [];
   private scheduled = new Set<number>();
   private scheduledUntil = 0;
+  /**
+   * True while a scheduled graph exists on the audio timeline. Pausing only
+   * suspends the context — which freezes ctx.currentTime, so the existing
+   * schedule stays valid and resume continues exactly where it stopped. Without
+   * this flag, resume would schedule a second copy of the session on top of the
+   * first.
+   */
+  private live = false;
 
   private script: Script | null = null;
   private status: Status = 'idle';
@@ -198,7 +228,7 @@ export class Engine {
     const ctx = this.ensureContext();
     const from = this.pausedAt >= totalSeconds(this.script) - 0.5 ? 0 : this.pausedAt;
     if (ctx.state === 'suspended') await ctx.resume().catch(() => undefined);
-    if (this.status !== 'playing') this.schedule(from);
+    if (!this.live) this.schedule(from);
     this.status = 'playing';
     this.startTicking();
     try {
@@ -276,9 +306,22 @@ export class Engine {
     return this.volumeValue;
   }
 
-  /** Audition a single layer while editing — plays until stopped. */
+  /**
+   * Audition a single layer while editing.
+   *
+   * Resuming the context would restart a merely-suspended session underneath
+   * the audition, so the session is taken down first and its position kept —
+   * pressing play afterwards picks it up where it was.
+   */
   async previewLayer(l: Layer, seconds = 30): Promise<void> {
     const ctx = this.ensureContext();
+    if (this.live) {
+      this.pausedAt = this.position();
+      this.clearVoices();
+      this.status = 'paused';
+      this.stopTicking();
+      this.emit();
+    }
     if (ctx.state === 'suspended') await ctx.resume().catch(() => undefined);
     this.stopPreview();
     const script: Script = { v: 2, title: 'preview', segments: [{ dur: seconds, layers: [l] }] };
@@ -293,7 +336,7 @@ export class Engine {
       ctx, script, segIndex: 0, layerIndex: 0, t0: now, span: seconds, offset: 0, dest: gain,
       env: envelopeFor(script),
     });
-    this.segGains.push(gain);
+    this.previewGain = gain;
     try {
       await this.el?.play();
     } catch {
@@ -302,10 +345,11 @@ export class Engine {
   }
 
   stopPreview(): void {
-    if (this.previewVoice && this.ctx) {
-      this.previewVoice.stop(this.ctx.currentTime);
-      this.previewVoice = null;
-    }
+    const now = this.ctx?.currentTime ?? 0;
+    this.previewVoice?.stop(now);
+    this.previewVoice = null;
+    releaseGain(this.previewGain, now);
+    this.previewGain = null;
   }
 
   // --- scheduling ---
@@ -314,6 +358,7 @@ export class Engine {
     if (!this.script || !this.ctx || !this.bus) return;
     const ctx = this.ctx;
     this.scheduled.clear();
+    this.live = true;
     this.startCtxTime = ctx.currentTime + 0.08;
     this.startPosition = from;
     this.scheduledUntil = from;
@@ -391,6 +436,7 @@ export class Engine {
   }
 
   private onTickHandler: (() => void) | null = null;
+  private previewGain: GainNode | null = null;
 
   private stopTicking(): void {
     if (this.tick !== null) {
@@ -415,20 +461,15 @@ export class Engine {
 
   private clearVoices(): void {
     const now = this.ctx?.currentTime ?? 0;
-    for (const v of this.voices) v.stop(now);
+    // Cut the sources a beat later than the fade so the ramp is what you hear,
+    // not the waveform being severed mid-cycle.
+    for (const v of this.voices) v.stop(now + FADE_OUT);
     this.voices = [];
-    for (const g of this.segGains) {
-      try {
-        g.gain.cancelScheduledValues(now);
-        g.gain.setTargetAtTime(0, now, 0.01);
-        g.disconnect();
-      } catch {
-        /* already gone */
-      }
-    }
+    for (const g of this.segGains) releaseGain(g, now);
     this.segGains = [];
     this.scheduled.clear();
-    this.previewVoice = null;
+    this.live = false;
+    this.stopPreview();
   }
 }
 

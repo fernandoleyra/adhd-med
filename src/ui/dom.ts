@@ -137,6 +137,9 @@ export function toggle(label: string, value: boolean, onchange: (v: boolean) => 
     el('input', {
       type: 'checkbox',
       checked: value,
+      // The wrapping <label> already names it, but the box is visually hidden
+      // behind the drawn switch, so be explicit for screen readers.
+      'aria-label': label,
       onchange: (e: Event) => onchange((e.target as HTMLInputElement).checked),
     }),
     el('span', { class: 'switch-body' }, [

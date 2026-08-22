@@ -409,9 +409,11 @@ canvas.strip { width: 100%; display: block; }
   pointer-events: none;
 }
 
-.grid-seq { display: grid; gap: 2px; }
+.grid-seq { display: grid; gap: 3px; }
+/* A dense control by nature: 30px clears the WCAG 2.5.8 minimum of 24px
+   without making eight columns of six rows taller than the screen. */
 .grid-seq .cell {
-  min-height: 26px;
+  min-height: 30px;
   border: 1px solid var(--hairline);
   background: transparent;
   cursor: pointer;
