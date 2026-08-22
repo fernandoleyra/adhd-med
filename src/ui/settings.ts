@@ -2,6 +2,7 @@
  * Settings. Short on purpose: there is no account to manage, and the only
  * secret in here is a key you chose to paste.
  */
+import { aiLabel } from '../ai/client.js';
 import { engine } from '../audio/engine.js';
 import { applyTheme, MODELS, store } from '../store.js';
 import { openAirplane } from '../pwa/offline.js';
@@ -108,10 +109,11 @@ export function openSettings(): void {
       ]),
 
       section('AI DJ', [
+        el('p', { class: 'field-hint', text: `${aiLabel(s)} · this deployment` }),
         el('label', { class: 'field' }, [
           el('span', { class: 'field-head' }, [el('span', { class: 'field-label', text: 'OpenRouter key' })]),
           keyInput,
-          el('span', { class: 'field-hint', text: 'this browser only · optional · openrouter.ai/keys' }),
+          el('span', { class: 'field-hint', text: 'only if you want your own · openrouter.ai/keys' }),
         ]),
         el('label', { class: 'field' }, [
           el('span', { class: 'field-head' }, [el('span', { class: 'field-label', text: 'Model' })]),
@@ -121,7 +123,7 @@ export function openSettings(): void {
         el('label', { class: 'field', style: { marginTop: 'var(--s4)' } }, [
           el('span', { class: 'field-head' }, [el('span', { class: 'field-label', text: 'Proxy' })]),
           proxyInput,
-          el('span', { class: 'field-hint', text: 'optional · use instead of a key' }),
+          el('span', { class: 'field-hint', text: 'overrides both' }),
         ]),
       ], 'optional'),
 

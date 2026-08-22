@@ -7,7 +7,7 @@
  * the field still works — the text is read by keyword and handed to the
  * generator, and the card says so plainly.
  */
-import { aiAvailable, AiError, requestSession } from '../ai/client.js';
+import { aiAvailable, AiError, aiLabel, requestSession } from '../ai/client.js';
 import { decodeScript } from '../core/codec.js';
 import {
   DURATIONS,
@@ -134,19 +134,26 @@ export function renderDj(host: HTMLElement): void {
       state.busy = false;
       askBtn.textContent = 'Ask the DJ';
       askBtn.disabled = false;
+      // Whether this deployment has a hosted DJ is only learned by asking once.
+      refreshBadge();
     }
   });
 
   // One badge, not a paragraph: it says which DJ will answer, and tapping it
   // goes where you would change that.
-  const aiNote = el('div', { class: 'badges', style: { margin: '0' } }, [
-    el('button', {
-      class: `badge ${aiAvailable(settings) ? 'is-accent' : ''}`,
-      type: 'button',
-      title: aiAvailable(settings) ? 'change the model' : 'add a key to use the conversational DJ',
-      onclick: () => openSettings(),
-    }, [aiAvailable(settings) ? (settings.proxyUrl ? 'AI · proxy' : `AI · ${settings.model}`) : 'scripted · no key']),
-  ]);
+  const aiBadge = el('button', {
+    class: 'badge',
+    type: 'button',
+    onclick: () => openSettings(),
+  });
+  const refreshBadge = () => {
+    const ok = aiAvailable(settings);
+    aiBadge.textContent = aiLabel(settings);
+    aiBadge.classList.toggle('is-accent', ok);
+    aiBadge.title = ok ? 'change the model' : 'add a key to use the conversational DJ';
+  };
+  refreshBadge();
+  const aiNote = el('div', { class: 'badges', style: { margin: '0' } }, [aiBadge]);
 
   // --- tags ---
   const goalRow = el('div', { class: 'chips scroll' });

@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "size": "node scripts/size.mjs",
-    "check": "tsc --noEmit && vitest run && vite build && node scripts/size.mjs"
+    "verify": "node scripts/verify-dist.mjs",
+    "check": "tsc --noEmit && vitest run && vite build && node scripts/verify-dist.mjs && node scripts/size.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",

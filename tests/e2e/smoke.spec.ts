@@ -20,6 +20,38 @@ test.describe('the app works on a phone', () => {
     await expect(page.getByRole('dialog', { name: /Before you start/i })).toBeHidden();
   });
 
+  /**
+   * The regression test for a blank white page in production: the build was
+   * fine, the tests were fine, and every asset URL pointed at a path the host
+   * did not serve. Nothing threw — the page just rendered its static header in
+   * Times New Roman with no styles and no app.
+   */
+  test('the shipped build boots at the path it is served from', async ({ page }) => {
+    const missing: string[] = [];
+    page.on('response', (res) => {
+      if (res.status() === 404) missing.push(new URL(res.url()).pathname);
+    });
+
+    await page.goto('./');
+    await dismissLeaflet(page);
+
+    // The stylesheet arrived: only app.css makes the dock stick and the tabs a
+    // grid. A 404'd stylesheet fails here rather than looking merely ugly.
+    await expect(page.locator('#dock')).toHaveCSS('position', 'sticky');
+    await expect(page.locator('#tabs')).toHaveCSS('display', 'grid');
+    const grad = await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--grad').trim(),
+    );
+    expect(grad).toContain('gradient');
+
+    // And the module ran: no bundle, no engine, no app.
+    expect(await page.evaluate(() => typeof window.adhdmed?.engine?.snapshot)).toBe('function');
+    await expect(page.locator('#tabs a')).toHaveCount(4);
+
+    // Nothing the page asked for was absent, whatever the mount point.
+    expect(missing).toEqual([]);
+  });
+
   test('every mode renders', async ({ page }) => {
     await page.goto('./');
     await dismissLeaflet(page);
