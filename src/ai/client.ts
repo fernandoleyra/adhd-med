@@ -258,7 +258,20 @@ export async function requestSession(req: AiRequest): Promise<Script> {
 
   const base = {
     model: req.model,
-    max_tokens: 2000,
+    /**
+     * Room for the answer *and* the thinking. Every free model on OpenRouter is
+     * a reasoning model, and reasoning tokens are spent from this same budget —
+     * at 2000 a model could think its way past the end of the reply and return
+     * nothing parseable. A set of eight segments is under a thousand tokens of
+     * JSON, so this is generous either way.
+     */
+    max_tokens: 4000,
+    /**
+     * And ask it not to deliberate for long. This is a constrained design task
+     * with the rules already written down, so low effort keeps both the budget
+     * and the 45-second timeout comfortable. Ignored by models without it.
+     */
+    reasoning: { effort: 'low' },
     temperature: 0.7,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
