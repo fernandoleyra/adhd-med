@@ -19,10 +19,16 @@ synthesised in your browser from numbers you can inspect.
 
 | | | |
 |---|---|---|
-| **DJ** | Say how you feel and what you need, get a session with its reasons attached. Works with an OpenRouter key, works just as well without one — the scripted generator uses the same arc grammar and needs no network. | `#/dj` |
+| **DJ** | Two paths. **Quick**: goal, feel, time, and one action at the end of them that plays exactly what it says — no network, no key. **AI set**: say where you are, out loud or as a colour, and a model plans a session that actually moves. Without a key the same request goes to the scripted arcs, and the card says so. | `#/dj` |
 | **Lab** | The whole synthesiser: layers, waveforms drawn as harmonic bars, AM/FM modulators, filters, ratio stacks, equations over time, seeded randomness, and an experimental envelope for sounds nobody has tested. | `#/lab` |
 | **Codex** | ~40 numbers from physics, astronomy, protocol and folklore, each with the exact arithmetic that makes it audible and a label saying how much weight it can bear. | `#/codex` |
 | **Logos** | Words into frequencies. Letters become numbers, numbers become pitch, and the derivation stays on screen. | `#/logos` |
+
+A colour is an input too, in the DJ. Light *is* a frequency — around 4×10^14 Hz
+— so a hue converts to a carrier the same way the Codex converts a planet's
+year: c/λ, then halved into hearing. The whole visible spectrum folds into about
+a third of an octave. The colour chooses the carrier; the beat still comes from
+the goal, because that is the half with evidence behind it.
 
 Plus **airplane mode** (✈ in the header), which opens the real Cache Storage and
 tells you file by file whether this will work with the radio off.

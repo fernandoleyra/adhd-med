@@ -44,6 +44,22 @@ export function gradient(
   return g;
 }
 
+/**
+ * The width a canvas can actually occupy inside `node`.
+ *
+ * `clientWidth` includes the element's padding, so measuring a padded card that
+ * way makes every canvas in it two paddings too wide — which is how the session
+ * timelines used to run off the right-hand edge of the screen. Subtract the
+ * padding and you get the content box, which is what "as wide as this card"
+ * means.
+ */
+export function contentWidth(node: Element | null | undefined, fallback = 320): number {
+  if (!node) return fallback;
+  const cs = getComputedStyle(node);
+  const w = node.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+  return w > 8 ? Math.floor(w) : fallback;
+}
+
 /** Size a canvas for the device, capped so phones stay cool. */
 export function fitCanvas(canvas: HTMLCanvasElement, cssWidth: number, cssHeight: number): CanvasRenderingContext2D {
   const dpr = Math.min(1.5, window.devicePixelRatio || 1);
@@ -61,6 +77,41 @@ function dash(ctx: CanvasRenderingContext2D, stroke: Sigil['stroke']): void {
   if (stroke === 'dashed') ctx.setLineDash([4, 3]);
   else if (stroke === 'dotted') ctx.setLineDash([1, 3]);
   else ctx.setLineDash([]);
+}
+
+/**
+ * A sphere, drawn as a wireframe: the outline, three latitudes, one meridian.
+ * The app's mark for the DJ — geometry rather than a logo, and the same lines
+ * whether it is live or not, because the state is the dot beside it.
+ */
+export function drawSphere(canvas: HTMLCanvasElement, size: number, ink: Ink, tilt = 0): void {
+  const ctx = fitCanvas(canvas, size, size);
+  const c = size / 2;
+  const r = size * 0.42;
+  ctx.save();
+  ctx.translate(c, c);
+  ctx.rotate(tilt);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = gradient(ctx, ink, -r, -r, r, r);
+
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Latitudes: circles seen edge-on, so they flatten toward the poles.
+  ctx.globalAlpha = 0.5;
+  for (const f of [-0.55, 0, 0.55]) {
+    const y = r * f;
+    const rx = Math.sqrt(Math.max(0, r * r - y * y));
+    ctx.beginPath();
+    ctx.ellipse(0, y, rx, rx * 0.26, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  // One meridian, for the sense of a solid turning.
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 0.34, r, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
 }
 
 export function drawSigil(
