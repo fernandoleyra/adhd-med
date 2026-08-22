@@ -2,15 +2,22 @@
  * Optional Cloudflare Worker for the AI DJ.
  *
  * ADHD MED does not need this. The scripted DJ works offline with no key, and a
- * visitor can paste their own key in Settings. Deploy this only if you want
- * everyone who opens your copy to get the conversational DJ on your budget.
+ * visitor can paste their own OpenRouter key in Settings. Deploy this only if
+ * you want everyone who opens your copy to get the conversational DJ on your
+ * account.
  *
- * It is deliberately dull: one endpoint, a fixed allow-list of models, a hard
- * cap on request size, a crude per-IP rate limit, and CORS locked to your own
- * origin. It never returns your key and never forwards anything else.
+ * Deliberately dull: one endpoint, an allow-list of models, a hard cap on
+ * request size and tokens, a crude per-IP rate limit, and CORS locked to your
+ * own origin. It never returns your key and forwards nothing else.
  */
 
-const ALLOWED_MODELS = new Set(['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5']);
+const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
+const ALLOWED_MODELS = new Set([
+  'openrouter/free',
+  'google/gemini-2.5-flash',
+  'anthropic/claude-sonnet-4.6',
+  'openai/gpt-5.2',
+]);
 const MAX_BODY_BYTES = 16_000;
 const MAX_TOKENS = 2000;
 const RATE_LIMIT = 20; // requests per IP per hour
@@ -27,7 +34,7 @@ export default {
 
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     if (request.method !== 'POST') return json({ error: 'POST only' }, 405, cors);
-    if (!env.ANTHROPIC_API_KEY) return json({ error: 'proxy is not configured' }, 500, cors);
+    if (!env.OPENROUTER_API_KEY) return json({ error: 'proxy is not configured' }, 500, cors);
 
     const raw = await request.text();
     if (raw.length > MAX_BODY_BYTES) return json({ error: 'request too large' }, 413, cors);
@@ -51,19 +58,19 @@ export default {
       await env.RATE.put(key, String(used + 1), { expirationTtl: 3600 });
     }
 
-    const upstream = await fetch('https://api.anthropic.com/v1/messages', {
+    const upstream = await fetch(ENDPOINT, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-api-key': env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
+        authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+        ...(env.ALLOWED_ORIGIN ? { 'http-referer': env.ALLOWED_ORIGIN, 'x-title': 'ADHD MED' } : {}),
       },
       body: JSON.stringify({
         model: body.model,
         max_tokens: Math.min(MAX_TOKENS, Number(body.max_tokens) || MAX_TOKENS),
-        system: body.system,
-        tools: body.tools,
+        temperature: body.temperature,
         messages: body.messages,
+        response_format: body.response_format,
       }),
     });
 

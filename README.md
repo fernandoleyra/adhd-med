@@ -19,7 +19,7 @@ synthesised in your browser from numbers you can inspect.
 
 | | | |
 |---|---|---|
-| **DJ** | Say how you feel and what you need, get a session with its reasons attached. Works with an Anthropic key, works just as well without one — the scripted generator uses the same arc grammar and needs no network. | `#/dj` |
+| **DJ** | Say how you feel and what you need, get a session with its reasons attached. Works with an OpenRouter key, works just as well without one — the scripted generator uses the same arc grammar and needs no network. | `#/dj` |
 | **Lab** | The whole synthesiser: layers, waveforms drawn as harmonic bars, AM/FM modulators, filters, ratio stacks, equations over time, seeded randomness, and an experimental envelope for sounds nobody has tested. | `#/lab` |
 | **Codex** | ~40 numbers from physics, astronomy, protocol and folklore, each with the exact arithmetic that makes it audible and a label saying how much weight it can bear. | `#/codex` |
 | **Logos** | Words into frequencies. Letters become numbers, numbers become pitch, and the derivation stays on screen. | `#/logos` |
@@ -87,10 +87,9 @@ npm run e2e        # end-to-end tests (Playwright, builds first)
 npm run check      # typecheck + unit + build + bundle budget
 ```
 
-Bundle budget, enforced in CI: **≤100 kB gzipped** for the initial code and
-≤250 kB total, excluding the AI adapter, which is a lazy chunk that only loads
-if you configure a key. Current build: ~54 kB gzipped, no runtime dependencies,
-system fonts only.
+Bundle budget, enforced in CI: **≤100 kB gzipped**. Current build is ~59 kB for
+the whole app, including the AI adapter — no runtime dependencies, system fonts
+only.
 
 ### Deploy
 
@@ -104,17 +103,29 @@ BASE_PATH=/my-fork/ npm run build
 
 ## The AI DJ is optional
 
-The conversational field works without a key: your text is read by keyword and
-handed to the scripted generator. To turn on the model, Settings → **AI DJ**:
+The field works without a key: your text is read by keyword and handed to the
+scripted generator. To turn the model on, Settings → **AI DJ**:
 
-- paste your own Anthropic API key. It is stored in this browser only, and
-  requests go from your browser straight to `api.anthropic.com` — there is no
-  server in the middle. A session costs roughly a cent.
+- paste your own [OpenRouter](https://openrouter.ai/keys) key. It stays in this
+  browser and requests go straight to OpenRouter — there is no server in the
+  middle. The default model is `openrouter/free`, so this can cost nothing; the
+  field takes any of OpenRouter's model ids if you'd rather pay for a better one.
 - or deploy `extras/proxy-worker/` (about forty lines of Cloudflare Worker) with
-  your own key, and put its URL in the proxy field so visitors don't need one.
+  your own key and put its URL in the proxy field, so visitors need no key at all.
 
-Either way the model only chooses the *shape*: its answer is validated and
-clamped by the same code as everything else. The physics is not up for negotiation.
+Either way the model only chooses the *shape*. Its answer comes back as strict
+JSON, is validated and clamped by the same code as everything else, and the
+physics is not up for negotiation.
+
+## The look
+
+One gradient — purple to blue to green — is the entire palette, and it carries
+meaning rather than decoration: the geometry is stroked with it, and the three
+evidence tiers take one stop each (measured green, protocol blue, lore purple),
+reinforced by solid, dashed and dotted strokes so colour is never the only
+channel. Everything else is ink on paper with hairline rules. Text is kept to
+what a number cannot say; detail lives one tap in, not on the screen you are
+trying to scan.
 
 ## How it's built
 
@@ -130,7 +141,8 @@ src/data/       codex.json, references.json — edit these, no code needed
 src/pwa/        hand-written service worker and the airplane-mode check
 ```
 
-Vanilla TypeScript, no framework, hash routing, one full-screen canvas.
+Vanilla TypeScript, no framework, no dependencies, hash routing, one
+full-screen canvas.
 Everything compiles to one **SessionScript**: a timeline of segments, each with
 layers, each layer a tone or noise source with its own waveform, modulators,
 filter and automation. Producers emit validated scripts; the engine validates

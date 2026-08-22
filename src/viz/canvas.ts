@@ -12,7 +12,7 @@
 import { engine } from '../audio/engine.js';
 import { segmentAt } from '../core/types.js';
 import { safeRate } from './geometry.js';
-import { readInk, type Ink } from './marks.js';
+import { gradient, readInk, type Ink } from './marks.js';
 
 const FPS = 30;
 const TRAIL = 5;
@@ -120,11 +120,12 @@ export class Veil {
       this.frames.push({ points: pts, count: n });
       while (this.frames.length > (this.reduced ? 1 : TRAIL)) this.frames.shift();
 
+      const trail = gradient(ctx, this.ink, cx - r, cy + r, cx + r, cy - r);
       this.frames.forEach((frame, i) => {
-        const alpha = ((i + 1) / this.frames.length) * 0.55;
+        const alpha = ((i + 1) / this.frames.length) * 0.6;
         ctx.globalAlpha = alpha;
-        ctx.strokeStyle = i === this.frames.length - 1 ? this.ink.line : this.ink.faint;
-        ctx.lineWidth = i === this.frames.length - 1 ? 1.1 : 1;
+        ctx.strokeStyle = trail;
+        ctx.lineWidth = i === this.frames.length - 1 ? 1.2 : 1;
         ctx.beginPath();
         for (let k = 0; k < frame.count; k++) {
           const x = frame.points[k * 2]!;
@@ -146,8 +147,8 @@ export class Veil {
     const beat = lead?.beat ?? 0;
     const { rate } = safeRate(beat);
     if (!this.reduced) this.phase += dt * rate * Math.PI * 2;
-    ctx.globalAlpha = 0.28;
-    ctx.strokeStyle = this.ink.faint;
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = gradient(ctx, this.ink, cx - r * 2, cy, cx + r * 2, cy);
     ctx.lineWidth = 1;
     for (let i = 1; i <= 3; i++) {
       const rr = r * (1 + i * 0.28);
@@ -162,8 +163,8 @@ export class Veil {
   private drawIdle(cx: number, cy: number, r: number): void {
     const { ctx } = this;
     const breath = this.reduced ? 1 : 1 + Math.sin(this.phase * 0.25) * 0.03;
-    ctx.globalAlpha = 0.5;
-    ctx.strokeStyle = this.ink.line;
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = gradient(ctx, this.ink, cx - r, cy + r, cx + r, cy - r);
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.arc(cx, cy, r * 0.55 * breath, 0, Math.PI * 2);
@@ -194,9 +195,9 @@ export class Veil {
 
     if (duration > 0) {
       const u = Math.min(1, position / duration);
-      ctx.globalAlpha = 0.6;
-      ctx.strokeStyle = this.ink.accent;
-      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.8;
+      ctx.strokeStyle = gradient(ctx, this.ink, 0, height, width, height);
+      ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(0, height - 0.75);
       ctx.lineTo(width * u, height - 0.75);

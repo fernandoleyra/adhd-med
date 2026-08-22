@@ -242,7 +242,7 @@ function buildHarmonics(l: Layer, rebuild: () => void): HTMLElement {
   }
   return el('div', {}, [
     bars,
-    el('p', { class: 'field-hint', text: 'Tap a bar to set that partial. This builds a PeriodicWave — a waveform that may not have a name.' }),
+    el('p', { class: 'field-hint', text: 'tap a bar — this builds a waveform that may not have a name' }),
     el('div', { class: 'row tight' }, [
       ...['saw-ish', 'square-ish', 'organ', 'odd only', 'single'].map((name) =>
         chip(name, {
@@ -384,7 +384,7 @@ function buildMods(l: Layer, rebuild: () => void): HTMLElement {
           value: mod.jitter ?? 0,
           min: 0,
           max: env().jitter[1],
-          hint: 'seeded random walk — the same seed drifts the same way',
+          hint: 'seeded random walk',
           oninput: (v) => {
             mod.jitter = v;
           },
@@ -435,9 +435,7 @@ function buildMods(l: Layer, rebuild: () => void): HTMLElement {
     el('p', { class: 'field-hint' }, [
       `variables: ${EXPR_VOCAB.vars.join(' ')} · constants: ${EXPR_VOCAB.consts.join(' ')} · functions: ${EXPR_VOCAB.fns.join(' ')}`,
     ]),
-    el('p', { class: 'field-hint' }, [
-      'Sampled 8 times a second, so this is for shapes and sweeps. For anything faster, use the modulators above — those run on the audio thread.',
-    ]),
+    el('p', { class: 'field-hint', text: 'sampled 8×/s — for faster movement use the modulators' }),
   ]);
 }
 
@@ -536,7 +534,7 @@ function buildLayerEditor(rebuild: () => void): HTMLElement {
             },
           }),
         ),
-        l.wave.kind === 'custom' ? undefined : 'sine is the honest one: a single frequency and nothing else',
+        undefined,
       ),
       l.wave.kind === 'custom' ? buildHarmonics(l, rebuild) : el('div'),
       field({
@@ -784,7 +782,7 @@ function buildGrid(rebuild: () => void): HTMLElement {
 
   return el('div', {}, [
     grid,
-    el('p', { class: 'field-hint', text: 'Each column is a segment, each row a band. Tap to place; tap another row in the same column to move it.' }),
+    el('p', { class: 'field-hint', text: 'column = segment · row = band' }),
     el('div', { class: 'row' }, [
       el('button', {
         class: 'ghost',
@@ -803,7 +801,7 @@ function buildGrid(rebuild: () => void): HTMLElement {
 function buildNumbers(rebuild: () => void): HTMLElement {
   const l = lay();
   return el('div', {}, [
-    el('p', { class: 'field-hint', text: 'Build a stack from a ratio set: the selected layer keeps the beat, and each ratio is added as a drone above it.' }),
+    el('p', { class: 'field-hint', text: 'adds each ratio as a drone above this layer' }),
     ...RATIO_SETS.map((set) =>
       el('div', { class: 'row', style: { marginBottom: 'var(--s2)' } }, [
         chip(set.label, {
@@ -883,7 +881,7 @@ function buildDice(rebuild: () => void): HTMLElement {
     el('label', { class: 'field' }, [
       el('span', { class: 'field-head' }, [el('span', { class: 'field-label', text: 'seed' }), num(String(current.seed ?? 1))]),
       seedInput,
-      el('span', { class: 'field-hint', text: 'The seed drives every drift and roll. Same seed, same session, forever.' }),
+      el('span', { class: 'field-hint', text: 'same seed, same session' }),
     ]),
     el('div', { class: 'row' }, [
       el('button', {
@@ -971,7 +969,7 @@ function openJson(rebuild: () => void): void {
     title: 'Session as JSON',
     wide: true,
     body: [
-      el('p', { class: 'lead', text: 'The whole session, editable. Paste one in and press load — it gets validated and clamped like anything else.' }),
+      el('p', { class: 'field-hint', text: 'paste one in and load — it gets validated like anything else' }),
       area,
       el('div', { class: 'row', style: { marginTop: 'var(--s3)' } }, [
         el('button', {
@@ -1071,7 +1069,6 @@ export function renderLab(host: HTMLElement): void {
   host.append(
     el('div', { class: 'view' }, [
       section('Lab', [
-        el('p', { class: 'lead', text: 'Everything the engine can do, exposed. Nothing here is a preset you cannot take apart.' }),
         stripCanvas,
         el('div', { class: 'spread' }, [
           el('span', { class: 'field-hint', text: `${current.segments.length} segments · ${formatMinutes(totalSeconds(current))} · ${segmentSummary(s)}` }),

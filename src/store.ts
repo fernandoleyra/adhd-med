@@ -34,10 +34,15 @@ export interface State {
 
 const KEY = 'adhdmed.v1';
 
+/**
+ * A short list from OpenRouter's catalogue. Any of its model ids works — the
+ * settings field takes a typed one too.
+ */
 export const MODELS = [
-  { id: 'claude-opus-5', label: 'Opus 5', note: 'best sessions, a few seconds slower' },
-  { id: 'claude-sonnet-5', label: 'Sonnet 5', note: 'balanced' },
-  { id: 'claude-haiku-4-5', label: 'Haiku 4.5', note: 'cheapest and fastest' },
+  { id: 'openrouter/free', label: 'Free', note: 'no cost, auto-routed' },
+  { id: 'google/gemini-2.5-flash', label: 'Flash', note: 'fast, pennies' },
+  { id: 'anthropic/claude-sonnet-4.6', label: 'Sonnet', note: 'best sessions' },
+  { id: 'openai/gpt-5.2', label: 'GPT', note: 'alternative' },
 ];
 
 const DEFAULTS: State = {
@@ -49,7 +54,7 @@ const DEFAULTS: State = {
     seenLeaflet: false,
     experimental: false,
     apiKey: '',
-    model: 'claude-opus-5',
+    model: 'openrouter/free',
     proxyUrl: '',
     wakeLock: false,
   },

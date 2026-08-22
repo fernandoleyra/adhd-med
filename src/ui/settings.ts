@@ -6,7 +6,7 @@ import { engine } from '../audio/engine.js';
 import { applyTheme, MODELS, store } from '../store.js';
 import { openAirplane } from '../pwa/offline.js';
 import { getVeil } from '../viz/canvas.js';
-import { el, field, openSheet, section, select, toast, toggle } from './dom.js';
+import { chip, el, field, openSheet, section, select, toast, toggle } from './dom.js';
 import { openLeaflet } from './leaflet.js';
 import { openLibrary } from './library.js';
 
@@ -17,12 +17,38 @@ export function openSettings(): void {
     type: 'password',
     class: 'mono',
     value: s.apiKey,
-    placeholder: 'sk-ant-…',
+    placeholder: 'sk-or-v1-…',
     autocomplete: 'off',
     spellcheck: 'false',
-    'aria-label': 'Anthropic API key',
+    'aria-label': 'OpenRouter API key',
     oninput: (ev: Event) => store.update({ apiKey: (ev.target as HTMLInputElement).value.trim() }),
   });
+
+  // OpenRouter has hundreds of models; the chips are a shortlist and the field
+  // takes any id.
+  const modelInput = el('input', {
+    type: 'text',
+    class: 'mono',
+    value: s.model,
+    placeholder: 'openrouter/free',
+    autocapitalize: 'off',
+    spellcheck: 'false',
+    'aria-label': 'Model',
+    oninput: (ev: Event) => store.update({ model: (ev.target as HTMLInputElement).value.trim() }),
+  });
+  const modelChips = el('div', { class: 'chips' },
+    MODELS.map((m) =>
+      chip(m.label, {
+        active: s.model === m.id,
+        hint: `${m.id} — ${m.note}`,
+        onclick: () => {
+          store.update({ model: m.id });
+          modelInput.value = m.id;
+          modelChips.querySelectorAll('.chip').forEach((c) => c.classList.toggle('is-on', c.textContent === m.label));
+        },
+      }),
+    ),
+  );
 
   const proxyInput = el('input', {
     type: 'text',
@@ -44,7 +70,7 @@ export function openSettings(): void {
           max: 1,
           unit: '%',
           format: (v) => String(Math.round(v * 100)),
-          hint: 'A limiter and a hard cap sit after this in every mode.',
+          hint: 'a limiter sits after this, always',
           oninput: (v) => {
             store.update({ volume: v });
             engine.setVolume(v);
@@ -60,7 +86,7 @@ export function openSettings(): void {
           s.method,
           (v) => store.update({ method: v as typeof s.method }),
         ),
-        toggle('I usually wear headphones', s.headphones, (v) => store.update({ headphones: v })),
+        toggle('Headphones', s.headphones, (v) => store.update({ headphones: v })),
       ]),
 
       section('Look', [
@@ -78,44 +104,36 @@ export function openSettings(): void {
             getVeil()?.refreshTheme();
           },
         ),
-        el('p', { class: 'field-hint', text: 'Visuals never modulate brightness faster than 2 Hz, and freeze entirely if your system asks for reduced motion.' }),
+        el('p', { class: 'field-hint', text: 'nothing flickers faster than 2 Hz' }),
       ]),
 
       section('AI DJ', [
-        el('p', { class: 'field-hint' }, [
-          'Optional. Without a key the DJ still works — it reads your text by keyword and uses the scripted generator, which needs no network at all. With a key, requests go from this browser straight to the API: there is no server in between, and the key never leaves this device.',
-        ]),
         el('label', { class: 'field' }, [
-          el('span', { class: 'field-head' }, [el('span', { class: 'field-label', text: 'Anthropic API key' })]),
+          el('span', { class: 'field-head' }, [el('span', { class: 'field-label', text: 'OpenRouter key' })]),
           keyInput,
-          el('span', { class: 'field-hint', text: 'Stored in this browser only. Roughly a cent or two per session.' }),
+          el('span', { class: 'field-hint', text: 'this browser only · optional · openrouter.ai/keys' }),
         ]),
-        select('Model', MODELS.map((m) => ({ value: m.id, label: `${m.label} — ${m.note}` })), s.model, (v) =>
-          store.update({ model: v }),
-        ),
         el('label', { class: 'field' }, [
-          el('span', { class: 'field-head' }, [el('span', { class: 'field-label', text: 'Or a proxy URL' })]),
-          proxyInput,
-          el('span', { class: 'field-hint', text: 'If you deployed the worker in extras/proxy-worker, put it here and leave the key blank.' }),
+          el('span', { class: 'field-head' }, [el('span', { class: 'field-label', text: 'Model' })]),
+          modelInput,
         ]),
-      ]),
+        modelChips,
+        el('label', { class: 'field', style: { marginTop: 'var(--s4)' } }, [
+          el('span', { class: 'field-head' }, [el('span', { class: 'field-label', text: 'Proxy' })]),
+          proxyInput,
+          el('span', { class: 'field-hint', text: 'optional · use instead of a key' }),
+        ]),
+      ], 'optional'),
 
       section('Offline', [
         el('div', { class: 'row' }, [
-          el('button', { class: 'ghost', type: 'button', onclick: () => void openAirplane() }, ['Airplane mode']),
-        ]),
-        el('p', { class: 'field-hint', text: 'Checks the real cache, file by file, so you know before the plane doors close.' }),
-      ]),
-
-      section('Reading', [
-        el('div', { class: 'row' }, [
+          el('button', { class: 'ghost', type: 'button', onclick: () => void openAirplane() }, ['Airplane']),
           el('button', { class: 'ghost', type: 'button', onclick: () => openLibrary() }, ['Library']),
-          el('button', { class: 'ghost', type: 'button', onclick: () => openLeaflet() }, ['Package insert']),
+          el('button', { class: 'ghost', type: 'button', onclick: () => openLeaflet() }, ['Insert']),
         ]),
       ]),
 
       section('This browser', [
-        el('p', { class: 'field-hint', text: `${store.get().saved.length} saved sessions. Nothing is stored anywhere else.` }),
         el('div', { class: 'row' }, [
           el('button', {
             class: 'ghost',
@@ -123,10 +141,10 @@ export function openSettings(): void {
             onclick: () => {
               if (!confirm('Forget saved sessions, preferences and any key stored here?')) return;
               localStorage.clear();
-              toast('Cleared. Reloading.');
+              toast('Cleared.');
               window.setTimeout(() => location.reload(), 600);
             },
-          }, ['Forget everything']),
+          }, [`Forget everything (${store.get().saved.length} saved)`]),
         ]),
       ]),
     ],

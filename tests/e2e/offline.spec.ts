@@ -35,11 +35,11 @@ test.describe('airplane mode', () => {
     // every tone is synthesised locally.
     await expect(page.getByRole('heading', { name: 'DJ' }).first()).toBeVisible();
     await page.goto('./#/codex');
-    await expect(page.locator('.card').first()).toBeVisible();
+    await expect(page.locator('.codex-row').first()).toBeVisible();
 
     await page.goto('./#/dj');
     await dismissLeaflet(page);
-    await page.getByRole('button', { name: 'Build it' }).click();
+    await page.getByRole('button', { name: 'Play something' }).click();
     await page.getByRole('button', { name: 'Begin' }).first().click();
     const status = await page.evaluate(async () => {
       await new Promise((r) => setTimeout(r, 800));

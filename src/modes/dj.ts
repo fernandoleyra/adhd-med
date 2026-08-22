@@ -25,6 +25,7 @@ import { loadIntoLab } from './lab.js';
 import { navigate } from '../router.js';
 import { store } from '../store.js';
 import { chip, clear, el, section, toast } from '../ui/dom.js';
+import { openSettings } from '../ui/settings.js';
 import { playScript, sessionCard } from '../ui/player.js';
 import { isOffline } from '../pwa/offline.js';
 
@@ -70,28 +71,39 @@ export function renderDj(host: HTMLElement): void {
 
   // --- conversational field ---
   const input = el('textarea', {
-    placeholder: 'Tell the DJ how you feel and what you need.\n\ne.g. “wired from too much coffee, need to write for an hour without spiralling”',
+    rows: '3',
+    placeholder: 'How do you feel, and what do you need?',
     'aria-label': 'Tell the DJ how you feel and what you need',
     oninput: (e: Event) => {
       state.text = (e.target as HTMLTextAreaElement).value;
-      askBtn.disabled = state.busy || state.text.trim().length < 3;
+      askBtn.textContent = state.text.trim().length >= 3 ? 'Ask the DJ' : 'Play something';
     },
   });
 
-  const askBtn = el('button', { class: 'primary', type: 'button', disabled: true }, ['Ask the DJ']);
+  const askBtn = el('button', { class: 'primary', type: 'button' }, ['Play something']);
   askBtn.addEventListener('click', async () => {
     if (state.busy) return;
     const text = state.text.trim();
+    // An empty field is not an error: build from whatever the chips say.
+    if (text.length < 3) {
+      show(
+        generate({
+          goal: state.goal,
+          moods: state.moods,
+          minutes: state.minutes,
+          seed: Date.now() % 1e6,
+          method: store.settings.method,
+        }),
+      );
+      return;
+    }
     const tags = inferTags(text);
     const hasAi = aiAvailable(store.settings);
     if (!hasAi) {
       const script = generate({ ...tags, seed: Date.now() % 1e6, method: store.settings.method });
-      script.title = `${script.title}`;
       show(
         script,
-        isOffline()
-          ? 'offline · scripted DJ · same grammar, no network'
-          : 'scripted DJ · add a key in settings for the conversational one',
+        isOffline() ? 'offline · scripted' : 'scripted',
       );
       return;
     }
@@ -107,29 +119,34 @@ export function renderDj(host: HTMLElement): void {
         model: store.settings.model,
         proxyUrl: store.settings.proxyUrl || undefined,
       });
-      show(script, `AI DJ · ${store.settings.model}`);
+      show(script, `AI · ${store.settings.model}`);
     } catch (err) {
       const message = err instanceof AiError ? err.message : 'The DJ did not answer';
       const script = generate({ ...tags, seed: Date.now() % 1e6, method: store.settings.method });
-      show(script, `scripted fallback · ${message.toLowerCase()}`);
+      show(script, `scripted · ${message.toLowerCase()}`);
       toast(`${message}. Used the scripted DJ instead.`, 'warn');
     } finally {
       state.busy = false;
       askBtn.textContent = 'Ask the DJ';
-      askBtn.disabled = state.text.trim().length < 3;
+      askBtn.disabled = false;
     }
   });
 
-  const aiNote = el('p', { class: 'field-hint' }, [
-    aiAvailable(settings)
-      ? `Conversational DJ on · ${settings.proxyUrl ? 'via your proxy' : settings.model}. The arc it writes is validated and clamped like any other.`
-      : 'No key set, so the field is read by keyword and handed to the scripted DJ. That path never needs a network.',
+  // One badge, not a paragraph: it says which DJ will answer, and tapping it
+  // goes where you would change that.
+  const aiNote = el('div', { class: 'badges', style: { margin: '0' } }, [
+    el('button', {
+      class: `badge ${aiAvailable(settings) ? 'is-accent' : ''}`,
+      type: 'button',
+      title: aiAvailable(settings) ? 'change the model' : 'add a key to use the conversational DJ',
+      onclick: () => openSettings(),
+    }, [aiAvailable(settings) ? (settings.proxyUrl ? 'AI · proxy' : `AI · ${settings.model}`) : 'scripted · no key']),
   ]);
 
   // --- tags ---
-  const goalRow = el('div', { class: 'chips' });
-  const moodRow = el('div', { class: 'chips' });
-  const durRow = el('div', { class: 'chips' });
+  const goalRow = el('div', { class: 'chips scroll' });
+  const moodRow = el('div', { class: 'chips scroll' });
+  const durRow = el('div', { class: 'chips scroll' });
 
   const buildTags = () => {
     clear(goalRow);
@@ -176,52 +193,35 @@ export function renderDj(host: HTMLElement): void {
   };
   buildTags();
 
-  const buildBtn = el('button', {
-    class: 'primary',
-    type: 'button',
-    onclick: () =>
-      show(
-        generate({
-          goal: state.goal,
-          moods: state.moods,
-          minutes: state.minutes,
-          seed: Date.now() % 1e6,
-          method: store.settings.method,
-        }),
-        'scripted DJ',
-      ),
-  }, ['Build it']);
-
   const diceBtn = el('button', {
     class: 'ghost',
     type: 'button',
     onclick: () => {
       const seed = Math.floor(Math.random() * 1e6);
-      show(surprise(seed), `seed ${seed.toString(36)} — same seed, same session`);
+      show(surprise(seed), `seed ${seed.toString(36)}`);
     },
   }, ['Roll the dice']);
 
   // --- presets ---
   const presetRow = el(
     'div',
-    { class: 'chips' },
+    { class: 'chips scroll' },
     PRESETS.map((p) =>
       chip(p.name, {
         onclick: () => {
           const script = preset(p.id, store.settings.method);
-          if (script) show(script, 'preset');
+          if (script) show(script, undefined);
         },
       }),
     ),
   );
 
   // --- saved ---
-  const savedRow = el('div', { class: 'chips' });
+  const savedRow = el('div', { class: 'chips scroll' });
   const buildSaved = () => {
     const saved = store.get().saved;
     clear(savedRow);
     if (!saved.length) {
-      savedRow.appendChild(el('p', { class: 'field-hint', text: 'Nothing saved yet. Sessions you save live in this browser; links carry them anywhere.' }));
       return;
     }
     saved.forEach((s) =>
@@ -229,7 +229,7 @@ export function renderDj(host: HTMLElement): void {
         chip(s.title, {
           onclick: async () => {
             const script = await decodeScript(s.payload);
-            if (script) show(script, 'saved');
+            if (script) show(script);
             else toast('That saved session could not be read.', 'warn');
           },
           tag: new Date(s.at).toLocaleDateString(),
@@ -243,23 +243,15 @@ export function renderDj(host: HTMLElement): void {
   host.append(
     el('div', { class: 'view' }, [
       section('DJ', [
-        el('p', { class: 'lead', text: 'Say what you need. You get a session with its reasons attached.' }),
         input,
-        el('div', { class: 'row', style: { marginTop: 'var(--s3)' } }, [askBtn]),
-        aiNote,
+        el('div', { class: 'row', style: { marginTop: 'var(--s3)' } }, [askBtn, aiNote]),
       ]),
-      section('Or pick it apart', [
-        el('h3', { class: 'field-label', text: 'Goal' }),
-        goalRow,
-        el('h3', { class: 'field-label', style: { marginTop: 'var(--s4)' }, text: 'How you feel' }),
-        moodRow,
-        el('h3', { class: 'field-label', style: { marginTop: 'var(--s4)' }, text: 'Length' }),
-        durRow,
-        el('div', { class: 'row', style: { marginTop: 'var(--s4)' } }, [buildBtn, diceBtn]),
-      ], 'works offline'),
+      section('Goal', [goalRow]),
+      section('Feel', [moodRow]),
+      section('Time', [durRow, el('div', { class: 'row', style: { marginTop: 'var(--s3)' } }, [diceBtn])]),
       result,
       section('Presets', [presetRow]),
-      section('Saved here', [savedRow]),
+      ...(store.get().saved.length ? [section('Saved', [savedRow])] : []),
     ]),
   );
 }

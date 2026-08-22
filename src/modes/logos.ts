@@ -60,9 +60,8 @@ export function renderLogos(host: HTMLElement): void {
   host.append(
     el('div', { class: 'view' }, [
       section('Logos', [
-        el('p', { class: 'lead', text: 'Type something. The letters become numbers, the numbers become pitch, and the whole derivation stays on screen so you can check it.' }),
         input,
-        el('div', { class: 'chips', style: { marginTop: 'var(--s3)' } },
+        el('div', { class: 'chips scroll', style: { marginTop: 'var(--s3)' } },
           EXAMPLES.map((w) =>
             chip(w.toLowerCase(), {
               onclick: () => {
@@ -79,9 +78,7 @@ export function renderLogos(host: HTMLElement): void {
           sigil,
           el('div', { style: { flex: '1 1 200px' } }, [derivation]),
         ]),
-        el('p', { class: 'field-hint' }, [
-          `vowels set the beat — ${Object.entries(VOWEL_BEATS).map(([v, hz]) => `${v} ${hz}`).join(' · ')} Hz. Dark vowels slow, bright vowels fast.`,
-        ]),
+        el('p', { class: 'field-hint', text: Object.entries(VOWEL_BEATS).map(([v, hz]) => `${v} ${hz}`).join('  ') }),
       ]),
       section('Delivery', [
         methodChips(method, (m) => {
@@ -94,7 +91,6 @@ export function renderLogos(host: HTMLElement): void {
           min: 2,
           max: 60,
           unit: 'min',
-          hint: 'leave it and the word decides: two minutes a letter',
           oninput: (v) => {
             minutes = v;
             rebuild();

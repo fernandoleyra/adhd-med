@@ -74,10 +74,10 @@ function mountFooter(host: HTMLElement): void {
     el('a', { href: '#', onclick: (e: Event) => { e.preventDefault(); onclick(); } }, [label]);
 
   host.replaceChildren(
-    link(`Library · ${referenceCount()} references`, () => openLibrary()),
-    link('Package insert', () => openLeaflet()),
-    link('About the science', () => navigate('/about')),
-    el('a', { href: REPO, target: '_blank', rel: 'noopener noreferrer' }, ['Source · MIT']),
+    link(`Library ${referenceCount()}`, () => openLibrary()),
+    link('Insert', () => openLeaflet()),
+    link('About', () => navigate('/about')),
+    el('a', { href: REPO, target: '_blank', rel: 'noopener noreferrer' }, ['Source']),
     el('span', { class: 'disc', text: DISCLAIMER_SHORT }),
   );
 }

@@ -8,7 +8,7 @@ import { join } from 'node:path';
 
 const DIST = 'dist';
 const BUDGET_INITIAL_KB = 100; // JS + CSS the first paint needs
-const BUDGET_TOTAL_KB = 250; // everything except the lazy AI chunk
+const BUDGET_TOTAL_KB = 200; // the whole shipped app
 
 function walk(dir) {
   return readdirSync(dir).flatMap((name) => {
@@ -25,22 +25,20 @@ const rows = [];
 for (const path of files) {
   const raw = readFileSync(path);
   const gz = gzipSync(raw).length;
-  const isCode = /\.(js|css)$/.test(path);
-  const isLazyAi = /ai-[^/]*\.js$/.test(path) || path.includes('anthropic');
-  if (isCode && !isLazyAi) initial += gz;
-  if (!isLazyAi) total += gz;
-  rows.push({ path: path.replace(`${DIST}/`, ''), raw: raw.length, gz, lazy: isLazyAi });
+  if (/\.(js|css)$/.test(path)) initial += gz;
+  total += gz;
+  rows.push({ path: path.replace(`${DIST}/`, ''), raw: raw.length, gz });
 }
 
 rows.sort((a, b) => b.gz - a.gz);
 const kb = (n) => `${(n / 1024).toFixed(1)} kB`;
 console.log('file'.padEnd(46), 'raw'.padStart(10), 'gzip'.padStart(10));
 for (const r of rows.slice(0, 14)) {
-  console.log(`${r.path}${r.lazy ? ' (lazy)' : ''}`.padEnd(46), kb(r.raw).padStart(10), kb(r.gz).padStart(10));
+  console.log(r.path.padEnd(46), kb(r.raw).padStart(10), kb(r.gz).padStart(10));
 }
 console.log('-'.repeat(68));
 console.log(`initial code (gzip): ${kb(initial)} / budget ${BUDGET_INITIAL_KB} kB`);
-console.log(`total shipped (gzip, minus lazy AI chunk): ${kb(total)} / budget ${BUDGET_TOTAL_KB} kB`);
+console.log(`total shipped (gzip): ${kb(total)} / budget ${BUDGET_TOTAL_KB} kB`);
 
 let failed = false;
 if (initial > BUDGET_INITIAL_KB * 1024) {

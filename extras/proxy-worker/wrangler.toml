@@ -3,7 +3,7 @@ main = "worker.js"
 compatibility_date = "2026-01-01"
 
 # Secrets, set with `wrangler secret put`:
-#   ANTHROPIC_API_KEY   your key
+#   OPENROUTER_API_KEY  your key
 #   ALLOWED_ORIGIN      the origin allowed to call this, e.g. https://you.github.io
 #
 # Optional rate limiting: create a KV namespace and uncomment this block.

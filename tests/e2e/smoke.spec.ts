@@ -2,18 +2,22 @@ import { expect, test } from '@playwright/test';
 import { dismissLeaflet, gotoRoute } from './helpers.js';
 
 test.describe('the app works on a phone', () => {
-  test('the first run shows the package insert before anything else', async ({ page }) => {
+  test('the first run leads with the disclaimer and asks one question', async ({ page }) => {
     await page.goto('./');
-    const sheet = page.getByRole('dialog', { name: /Read before use/i });
+    const sheet = page.getByRole('dialog', { name: /Before you start/i });
     await expect(sheet).toBeVisible();
-    await expect(sheet).toContainText('not a medical device');
-    await expect(sheet).toContainText('Active ingredients');
-    await page.getByRole('button', { name: /Understood/i }).click();
-    await expect(sheet).toBeHidden();
+    await expect(sheet).toContainText('Not a medical device');
+    await expect(sheet).toContainText('Evidence');
+    // The long version is there, folded away rather than shouted.
+    await expect(sheet.getByText('the long version')).toBeVisible();
+    await expect(sheet).not.toContainText('frequency-following');
+    await sheet.getByText('the long version').click();
+    await expect(sheet).toContainText('ADHD trials are the weak spot');
 
-    // and it does not come back
+    await page.getByRole('button', { name: 'Begin', exact: true }).click();
+    await expect(sheet).toBeHidden();
     await page.reload();
-    await expect(page.getByRole('dialog', { name: /Read before use/i })).toBeHidden();
+    await expect(page.getByRole('dialog', { name: /Before you start/i })).toBeHidden();
   });
 
   test('every mode renders', async ({ page }) => {
@@ -25,7 +29,7 @@ test.describe('the app works on a phone', () => {
       ['/lab', 'Lab'],
       ['/codex', 'Codex'],
       ['/logos', 'Logos'],
-      ['/about', 'What this is'],
+      ['/about', 'ADHD MED'],
     ] as const) {
       await page.goto(`./#${route}`);
       await expect(page.getByRole('heading', { name: heading, exact: false }).first()).toBeVisible();
@@ -37,8 +41,8 @@ test.describe('the app works on a phone', () => {
     await page.goto('./');
     await dismissLeaflet(page);
     const foot = page.locator('#foot');
-    await expect(foot).toContainText(/Library · \d+ references/);
-    await expect(foot).toContainText('not a medical device');
+    await expect(foot).toContainText(/Library \d+/);
+    await expect(foot).toContainText('Not a medical device');
     await foot.getByRole('link', { name: /Library/ }).click();
     const sheet = page.getByRole('dialog', { name: 'Library' });
     await expect(sheet).toBeVisible();
@@ -55,7 +59,8 @@ test.describe('the app works on a phone', () => {
     await gotoRoute(page, '/dj');
     await page.getByRole('button', { name: 'Focus', exact: true }).click();
     await page.getByRole('button', { name: '25 min' }).click();
-    await page.getByRole('button', { name: 'Build it' }).click();
+    // One primary action: with an empty field it builds from the chips.
+    await page.getByRole('button', { name: 'Play something' }).click();
 
     const card = page.locator('.card').first();
     await expect(card).toContainText('Focus');
@@ -87,26 +92,37 @@ test.describe('the app works on a phone', () => {
 
   test('the DJ falls back to the scripted generator with no key', async ({ page }) => {
     await gotoRoute(page, '/dj');
-    await page.getByRole('textbox', { name: /Tell the DJ/i }).fill('wired from coffee, need to write for an hour');
+    const field = page.getByRole('textbox', { name: /Tell the DJ/i });
+    await field.fill('wired from coffee, need to write for an hour');
+    // Typing turns the same button into the conversational one.
     await page.getByRole('button', { name: 'Ask the DJ' }).click();
-    await expect(page.locator('.badge').filter({ hasText: /scripted DJ/ }).first()).toBeVisible();
+    await expect(page.locator('.badge').filter({ hasText: /^scripted/ }).first()).toBeVisible();
     await expect(page.locator('.card').first()).toContainText(/Deep Work|Deep work/i);
   });
 
-  test('the codex shows its arithmetic and its evidence tier', async ({ page }) => {
+  test('the codex is a scannable list, with the arithmetic one tap in', async ({ page }) => {
     await gotoRoute(page, '/codex');
-    await page.getByRole('textbox', { name: /Search the catalogue/i }).fill('schumann');
-    const card = page.locator('.card').filter({ hasText: 'Schumann resonance' }).first();
-    await expect(card).toBeVisible();
-    await expect(card.locator('.tier')).toHaveText('measured');
-    await expect(card).toContainText('×2^5');
-    await expect(card).toContainText('250.56 Hz');
-    await expect(card.locator('canvas')).toBeVisible();
+    const search = page.getByRole('searchbox', { name: /Search the catalogue/i });
+    await search.fill('schumann');
 
-    // the lore tier is labelled, not hidden
-    await page.getByRole('textbox', { name: /Search the catalogue/i }).fill('solfeggio');
-    await expect(page.locator('.card').first().locator('.tier')).toHaveText('lore');
-    await expect(page.locator('.card').first()).toContainText(/numerolog/i);
+    // The row itself is a line: mark, name, numbers, tier.
+    const row = page.locator('.codex-row').first();
+    await expect(row).toContainText('Schumann resonance');
+    await expect(row).toContainText('250.6 Hz');
+    await expect(row.locator('canvas')).toBeVisible();
+    await expect(row.locator('.tier')).toHaveText('meas');
+
+    // Everything else is behind it.
+    await row.click();
+    const sheet = page.getByRole('dialog', { name: /Schumann/i });
+    await expect(sheet).toBeVisible();
+    await expect(sheet).toContainText('×2^5');
+    await expect(sheet).toContainText('Earth');
+    await expect(sheet).toContainText('source:');
+
+    await page.keyboard.press('Escape');
+    await search.fill('solfeggio');
+    await expect(page.locator('.codex-row').first().locator('.tier')).toHaveText('lore');
   });
 
   test('words become frequencies, with the derivation shown', async ({ page }) => {
@@ -141,7 +157,7 @@ test.describe('the app works on a phone', () => {
     await gotoRoute(page, '/dj');
     await page.getByRole('button', { name: 'Calm', exact: true }).click();
     await page.getByRole('button', { name: '15 min' }).click();
-    await page.getByRole('button', { name: 'Build it' }).click();
+    await page.getByRole('button', { name: 'Play something' }).click();
     await page.getByRole('button', { name: 'Open in Lab' }).first().click();
     await expect(page.getByRole('textbox', { name: 'Session title' })).toHaveValue(/Calm/);
     await expect(page.getByRole('heading', { name: 'Timeline' })).toBeVisible();

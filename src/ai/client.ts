@@ -1,19 +1,21 @@
 /**
- * The AI DJ.
+ * The AI DJ, over OpenRouter.
  *
- * Optional by design. The app ships with no key and works completely without
- * one — the scripted generator uses the same session grammar. If a key is
- * present the SDK is loaded on demand (it is a separate chunk, so visitors
- * without a key never download it), and the request goes from this browser
- * straight to the API. There is no server in the middle unless you deploy the
- * optional proxy in extras/.
+ * Optional by design: the app ships with no key and the scripted generator uses
+ * the same grammar. When a key is present this is one plain fetch to an
+ * OpenAI-compatible endpoint — no SDK, so nothing is added to the bundle for
+ * the people who never set a key.
+ *
+ * The key is the user's own and stays in their browser. Requests go straight
+ * from the browser to OpenRouter unless a proxy URL is configured.
  */
 import { cleanScript } from '../core/ranges.js';
 import { layer, type Layer, type Script } from '../core/types.js';
 import { hashString } from '../core/rng.js';
-import { EMIT_SESSION_TOOL, SYSTEM_PROMPT, userMessage } from './prompt.js';
+import { SESSION_SCHEMA, SYSTEM_PROMPT, userMessage } from './prompt.js';
 
-const TIMEOUT_MS = 30_000;
+const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
+const TIMEOUT_MS = 45_000;
 
 export interface AiRequest {
   text: string;
@@ -42,8 +44,10 @@ interface AiSession {
   segments: AiSegment[];
 }
 
+export type AiErrorKind = 'auth' | 'network' | 'shape' | 'rate' | 'credit' | 'model';
+
 export class AiError extends Error {
-  constructor(message: string, readonly kind: 'auth' | 'network' | 'shape' | 'rate' | 'unknown') {
+  constructor(message: string, readonly kind: AiErrorKind) {
     super(message);
     this.name = 'AiError';
   }
@@ -83,95 +87,118 @@ export function aiSessionToScript(session: AiSession, seedText: string): Script 
   });
 }
 
-function readToolInput(content: unknown): AiSession | null {
-  if (!Array.isArray(content)) return null;
-  for (const block of content) {
-    const b = block as { type?: string; name?: string; input?: unknown; text?: string };
-    if (b.type === 'tool_use' && b.name === 'emit_session' && b.input) {
-      return b.input as AiSession;
+/** Pull the session object out of a chat completion, however it was wrapped. */
+function readSession(payload: unknown): AiSession | null {
+  const choice = (payload as { choices?: { message?: { content?: unknown; tool_calls?: unknown } }[] })?.choices?.[0];
+  const message = choice?.message;
+  if (!message) return null;
+
+  const candidates: string[] = [];
+  if (typeof message.content === 'string') candidates.push(message.content);
+  // Some providers return content as an array of parts.
+  if (Array.isArray(message.content)) {
+    for (const part of message.content as { text?: string }[]) {
+      if (typeof part?.text === 'string') candidates.push(part.text);
     }
   }
-  // Some responses answer in text despite the instruction; try to recover JSON.
-  for (const block of content) {
-    const b = block as { type?: string; text?: string };
-    if (b.type === 'text' && b.text) {
-      const match = b.text.match(/\{[\s\S]*\}/);
-      if (match) {
-        try {
-          return JSON.parse(match[0]) as AiSession;
-        } catch {
-          /* not JSON after all */
-        }
+  // And a few answer through a tool call even when asked for JSON.
+  if (Array.isArray(message.tool_calls)) {
+    for (const call of message.tool_calls as { function?: { arguments?: string } }[]) {
+      if (typeof call?.function?.arguments === 'string') candidates.push(call.function.arguments);
+    }
+  }
+
+  for (const raw of candidates) {
+    const text = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/, '');
+    for (const attempt of [text, text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)]) {
+      if (!attempt) continue;
+      try {
+        const parsed = JSON.parse(attempt) as AiSession;
+        if (parsed && Array.isArray(parsed.segments) && parsed.segments.length) return parsed;
+      } catch {
+        /* try the next shape */
       }
     }
   }
   return null;
 }
 
-function validate(session: AiSession | null): AiSession {
-  if (!session || !Array.isArray(session.segments) || session.segments.length === 0) {
-    throw new AiError('The DJ did not return a session', 'shape');
-  }
-  return session;
+function describeError(status: number, body: string): AiError {
+  const lower = body.toLowerCase();
+  if (status === 401 || status === 403) return new AiError('That key was rejected', 'auth');
+  if (status === 402 || lower.includes('credit')) return new AiError('Out of credit on that key', 'credit');
+  if (status === 429) return new AiError('Rate limited — try again shortly', 'rate');
+  if (status === 404 || lower.includes('not a valid model')) return new AiError('That model is not available', 'model');
+  if (status >= 500) return new AiError('OpenRouter is having trouble', 'network');
+  return new AiError(`Request failed (${status})`, 'network');
 }
 
-async function viaProxy(req: AiRequest): Promise<AiSession> {
+/** True when the failure is the model refusing structured output rather than a real error. */
+function isSchemaComplaint(status: number, body: string): boolean {
+  if (status !== 400 && status !== 422) return false;
+  const lower = body.toLowerCase();
+  return lower.includes('response_format') || lower.includes('json_schema') || lower.includes('schema');
+}
+
+async function post(url: string, headers: Record<string, string>, body: unknown): Promise<{ status: number; text: string }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(req.proxyUrl!, {
+    const res = await fetch(url, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers,
+      body: JSON.stringify(body),
       signal: controller.signal,
-      body: JSON.stringify({
-        model: req.model,
-        max_tokens: 2000,
-        system: SYSTEM_PROMPT,
-        tools: [EMIT_SESSION_TOOL],
-        messages: [{ role: 'user', content: userMessage(req.text, req) }],
-      }),
     });
-    if (res.status === 401 || res.status === 403) throw new AiError('The proxy refused the request', 'auth');
-    if (res.status === 429) throw new AiError('Rate limited — try again in a moment', 'rate');
-    if (!res.ok) throw new AiError(`Proxy error ${res.status}`, 'network');
-    const data = (await res.json()) as { content?: unknown };
-    return validate(readToolInput(data.content));
+    return { status: res.status, text: await res.text() };
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') throw new AiError('The DJ took too long', 'network');
+    throw new AiError('Could not reach OpenRouter', 'network');
   } finally {
     clearTimeout(timer);
   }
 }
 
-async function viaSdk(req: AiRequest): Promise<AiSession> {
-  const { default: Anthropic } = await import('@anthropic-ai/sdk');
-  const client = new Anthropic({
-    apiKey: req.apiKey,
-    dangerouslyAllowBrowser: true,
-    timeout: TIMEOUT_MS,
-    maxRetries: 1,
-  });
-  try {
-    const response = await client.messages.create({
-      model: req.model,
-      max_tokens: 2000,
-      system: SYSTEM_PROMPT,
-      tools: [EMIT_SESSION_TOOL as never],
-      messages: [{ role: 'user', content: userMessage(req.text, req) }],
-    });
-    return validate(readToolInput(response.content));
-  } catch (err) {
-    if (err instanceof AiError) throw err;
-    const status = (err as { status?: number }).status;
-    if (status === 401 || status === 403) throw new AiError('That API key was rejected', 'auth');
-    if (status === 429) throw new AiError('Rate limited — try again in a moment', 'rate');
-    if (status && status >= 500) throw new AiError('The API is having trouble', 'network');
-    throw new AiError((err as Error).message || 'Request failed', 'network');
-  }
-}
-
-/** Ask the DJ. Throws AiError; the caller falls back to the scripted generator. */
+/**
+ * Ask the DJ. Throws AiError; the caller falls back to the scripted generator.
+ *
+ * Only Authorization and Content-Type are sent: OpenRouter's optional
+ * attribution headers would add a preflight for no benefit here.
+ */
 export async function requestSession(req: AiRequest): Promise<Script> {
   if (!req.proxyUrl && !req.apiKey) throw new AiError('No key and no proxy configured', 'auth');
-  const session = req.proxyUrl ? await viaProxy(req) : await viaSdk(req);
+
+  const url = req.proxyUrl || ENDPOINT;
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  if (!req.proxyUrl) headers.authorization = `Bearer ${req.apiKey}`;
+
+  const base = {
+    model: req.model,
+    max_tokens: 2000,
+    temperature: 0.7,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userMessage(req.text, req) },
+    ],
+  };
+
+  // Ask for a schema-checked answer first; not every model on OpenRouter can do
+  // it, and the ones that can't say so with a 400 rather than a bad answer.
+  let response = await post(url, headers, { ...base, response_format: { type: 'json_schema', json_schema: SESSION_SCHEMA } });
+  if (isSchemaComplaint(response.status, response.text)) {
+    response = await post(url, headers, { ...base, response_format: { type: 'json_object' } });
+  }
+  if (response.status >= 400) throw describeError(response.status, response.text);
+
+  let payload: unknown;
+  try {
+    payload = JSON.parse(response.text);
+  } catch {
+    throw new AiError('OpenRouter sent something unreadable', 'shape');
+  }
+
+  const session = readSession(payload);
+  if (!session) throw new AiError('The DJ did not return a session', 'shape');
   return aiSessionToScript(session, `${req.text}|${req.minutes}`);
 }
 

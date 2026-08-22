@@ -1,12 +1,11 @@
 import type { Page } from '@playwright/test';
 
-/** The first run shows the package insert. Read it, then get out of the way. */
+/** The first run shows the insert. Read it, then get out of the way. */
 export async function dismissLeaflet(page: Page): Promise<void> {
-  const begin = page.getByRole('button', { name: /Understood/i });
-  if (await begin.isVisible({ timeout: 4000 }).catch(() => false)) {
-    await begin.click();
-    await begin.waitFor({ state: 'detached' }).catch(() => undefined);
-  }
+  const sheet = page.getByRole('dialog', { name: /Before you start/i });
+  if (!(await sheet.isVisible({ timeout: 4000 }).catch(() => false))) return;
+  await sheet.getByRole('button', { name: 'Begin', exact: true }).click();
+  await sheet.waitFor({ state: 'hidden' }).catch(() => undefined);
 }
 
 export async function gotoRoute(page: Page, route: string): Promise<void> {

@@ -52,15 +52,6 @@ export default defineConfig({
     target: 'es2022',
     cssCodeSplit: false,
     reportCompressedSize: true,
-    rollupOptions: {
-      output: {
-        // Keep the AI adapter out of the main chunk: it only loads with a key present.
-        manualChunks(id) {
-          if (id.includes('@anthropic-ai') || id.includes('/src/ai/')) return 'ai';
-          return null;
-        },
-      },
-    },
   },
   server: { host: true },
 });

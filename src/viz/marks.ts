@@ -12,6 +12,8 @@ export interface Ink {
   faint: string;
   accent: string;
   text: string;
+  /** the three stops of the app's one gradient: purple, blue, green */
+  stops: [string, string, string];
 }
 
 export function readInk(el: HTMLElement = document.body): Ink {
@@ -20,9 +22,26 @@ export function readInk(el: HTMLElement = document.body): Ink {
   return {
     line: get('--ink', '#16161a'),
     faint: get('--hairline', '#d8d8d2'),
-    accent: get('--accent', '#5546d6'),
+    accent: get('--c2', '#1f8fff'),
     text: get('--ink-2', '#6e6e76'),
+    stops: [get('--c1', '#6d4aff'), get('--c2', '#1f8fff'), get('--c3', '#12c79b')],
   };
+}
+
+/** The app's gradient, as something a canvas can stroke with. */
+export function gradient(
+  ctx: CanvasRenderingContext2D,
+  ink: Ink,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+): CanvasGradient {
+  const g = ctx.createLinearGradient(x0, y0, x1, y1);
+  g.addColorStop(0, ink.stops[0]);
+  g.addColorStop(0.52, ink.stops[1]);
+  g.addColorStop(1, ink.stops[2]);
+  return g;
 }
 
 /** Size a canvas for the device, capped so phones stay cool. */
@@ -56,7 +75,8 @@ export function drawSigil(
   ctx.translate(c, c);
   ctx.rotate(opts.rotation ?? 0);
   ctx.lineWidth = 1;
-  ctx.strokeStyle = opts.accent ? ink.accent : ink.line;
+  const grad = gradient(ctx, ink, -r, -r, r, r);
+  ctx.strokeStyle = grad;
   dash(ctx, sigil.stroke);
 
   // Rings: one per octave of transposition.
@@ -98,7 +118,7 @@ export function drawSigil(
     ctx.setLineDash([]);
     ctx.beginPath();
     ctx.arc(x, y, 1.6, 0, Math.PI * 2);
-    ctx.fillStyle = opts.accent ? ink.accent : ink.line;
+    ctx.fillStyle = grad;
     ctx.fill();
     dash(ctx, sigil.stroke);
   });
@@ -139,7 +159,7 @@ export function drawWordSigil(canvas: HTMLCanvasElement, word: string, size: num
     ctx.fill();
   }
 
-  ctx.strokeStyle = ink.line;
+  ctx.strokeStyle = gradient(ctx, ink, -r, -r, r, r);
   ctx.globalAlpha = 1;
   for (let s = 0; s < symmetry; s++) {
     ctx.save();
@@ -229,8 +249,9 @@ export function drawTimeline(canvas: HTMLCanvasElement, script: Script, opts: Ti
 
   // The beat line itself, sampled through each segment's automation.
   ctx.globalAlpha = 1;
-  ctx.strokeStyle = ink.line;
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = gradient(ctx, ink, padL, padT + h, width - padR, padT);
+  ctx.lineWidth = 1.75;
+  ctx.lineJoin = 'round';
   ctx.beginPath();
   let first = true;
   script.segments.forEach((seg, i) => {
@@ -302,8 +323,8 @@ export function drawHeatmap(canvas: HTMLCanvasElement, script: Script, width: nu
         if (bandOf(l.beat) === band.key) energy += l.gain;
       }
       if (energy <= 0) return;
-      ctx.globalAlpha = Math.min(0.8, 0.15 + energy * 0.6);
-      ctx.fillStyle = ink.line;
+      ctx.globalAlpha = Math.min(0.85, 0.2 + energy * 0.65);
+      ctx.fillStyle = gradient(ctx, ink, 28, 0, width, height);
       ctx.fillRect(x0, yTop + 1.5, Math.max(1, x1 - x0 - 1), rowH - 3);
     });
   });
