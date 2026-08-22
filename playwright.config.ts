@@ -2,7 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * The e2e suite runs against a production build served by vite preview, so the
- * service worker and the real base path are exercised rather than mocked.
+ * service worker and the real mount point are exercised rather than mocked.
+ * The build is relative, so preview serves it at the root — the same mount the
+ * deploy uses. Specs navigate relatively and work either way.
  */
 /**
  * Some sandboxes ship a Chromium that does not match this Playwright build.
@@ -18,7 +20,7 @@ export default defineConfig({
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   timeout: 60_000,
   use: {
-    baseURL: 'http://localhost:4173/adhd-med/',
+    baseURL: 'http://localhost:4173/',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     launchOptions: { executablePath },
@@ -40,7 +42,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run build && npx vite preview --port 4173 --strictPort',
-    url: 'http://localhost:4173/adhd-med/',
+    url: 'http://localhost:4173/',
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
   },

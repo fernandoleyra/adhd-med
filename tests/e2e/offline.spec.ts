@@ -86,6 +86,9 @@ test.describe('sharing', () => {
     // Make the session distinctive, then copy the link.
     await page.getByRole('textbox', { name: 'Session title' }).fill('Shared bench');
     await page.getByRole('button', { name: 'Copy link' }).click();
+    // The link is compressed before it is written, so wait for the app to say
+    // it happened rather than racing the clipboard.
+    await expect(page.locator('#toast')).toContainText('Link copied');
     const url = await page.evaluate(() => navigator.clipboard.readText());
     expect(url).toContain('#/play?m=');
     expect(url.length).toBeLessThan(4000);

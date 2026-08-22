@@ -21,6 +21,8 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+      - name: Relative output
+        run: npm run verify
       - name: Bundle budget
         run: npm run size
       - name: Install Chromium for Playwright

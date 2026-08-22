@@ -81,10 +81,10 @@ Every number in the Codex carries a tier, drawn as a stroke style:
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173/adhd-med/
+npm run dev        # http://localhost:5173/
 npm test           # unit tests (vitest)
 npm run e2e        # end-to-end tests (Playwright, builds first)
-npm run check      # typecheck + unit + build + bundle budget
+npm run check      # typecheck + unit + build + relative-output check + budget
 ```
 
 Bundle budget, enforced in CI: **≤100 kB gzipped**. Current build is ~59 kB for
@@ -93,25 +93,37 @@ only.
 
 ### Deploy
 
-Push to `main` and GitHub Actions builds and publishes to Pages
-(Settings → Pages → Source: **GitHub Actions**). For a different path:
+`npm run build` and serve `dist/`. Every asset reference is relative, so the
+same build boots at a domain root, at a project subpath, or off a file server —
+`npm run verify` fails the build if anything absolute creeps back in. Set
+`BASE_PATH=/my-fork/` only if you specifically need absolute URLs.
 
-```bash
-BASE_PATH=/ npm run build       # root domain
-BASE_PATH=/my-fork/ npm run build
-```
+The live copy is on Vercel: `vercel.json` sets the build command, keeps `sw.js`
+and `precache.json` uncacheable so a new deploy can always replace the old
+worker, and marks the hashed assets immutable. Pushing to `main` deploys.
+
+To host the AI DJ for everyone, set `OPENROUTER_API_KEY` in the project's
+environment; `api/dj.ts` picks it up. Without it that route answers 501 and the
+app quietly uses the scripted DJ.
 
 ## The AI DJ is optional
 
 The field works without a key: your text is read by keyword and handed to the
-scripted generator. To turn the model on, Settings → **AI DJ**:
+scripted generator. There are three ways a model can answer instead, in the
+order the app prefers them:
 
-- paste your own [OpenRouter](https://openrouter.ai/keys) key. It stays in this
-  browser and requests go straight to OpenRouter — there is no server in the
-  middle. The default model is `openrouter/free`, so this can cost nothing; the
-  field takes any of OpenRouter's model ids if you'd rather pay for a better one.
-- or deploy `extras/proxy-worker/` (about forty lines of Cloudflare Worker) with
-  your own key and put its URL in the proxy field, so visitors need no key at all.
+- **the deployment's own route.** `api/dj.ts` is one small Edge Function holding
+  the key server-side; on a deployment that has it, visitors need nothing at
+  all. It forwards a short allow-list of models, caps body size and tokens, and
+  rate-limits per IP. On a host without it the first request 404s once and the
+  app falls back for the rest of the session.
+- **your own [OpenRouter](https://openrouter.ai/keys) key**, pasted into
+  Settings → **AI DJ**. It stays in this browser and requests go straight to
+  OpenRouter — no server in the middle, and any of OpenRouter's model ids works.
+  The default `openrouter/free` costs nothing.
+- **a proxy of your own.** `extras/proxy-worker/` is about forty lines of
+  Cloudflare Worker for forks on a static host; its URL in the proxy field
+  overrides both of the above.
 
 Either way the model only chooses the *shape*. Its answer comes back as strict
 JSON, is validated and clamped by the same code as everything else, and the
