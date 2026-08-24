@@ -15,7 +15,7 @@
  * the button that plays it sits at the end of the choices rather than above
  * them.
  */
-import { aiAvailable, AiError, aiLabel, requestSession } from '../ai/client.js';
+import { aiAvailable, AiError, aiLabel, djCooldown, djRemaining, requestSession } from '../ai/client.js';
 import { colourLine, readColour, PALETTE_HUES, type ColourReading } from '../core/colour.js';
 import { decodeScript } from '../core/codec.js';
 import {
@@ -114,11 +114,15 @@ export function renderDj(host: HTMLElement): void {
   }, [orbCanvas, el('span', { class: 'orb-label', text: 'AI' }), orbDot]);
 
   const refreshOrb = () => {
-    const live = aiAvailable(settings);
+    // A dot claiming to be live while the next tap cannot succeed is exactly the
+    // lie this indicator exists to avoid, so a rate limit dims it too.
+    const live = aiAvailable(settings) && djCooldown() === 0;
+    const label = aiLabel(settings);
+    const left = djRemaining();
     orb.classList.toggle('is-live', live);
     orbDot.classList.toggle('is-live', live);
-    orb.setAttribute('aria-label', `${aiLabel(settings)} — open settings`);
-    orb.title = aiLabel(settings);
+    orb.setAttribute('aria-label', `${label} — open settings`);
+    orb.title = left === null ? label : `${label} · ${left} left`;
   };
   requestAnimationFrame(() => drawSphere(orbCanvas, 22, readInk(orb)));
   refreshOrb();

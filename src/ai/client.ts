@@ -42,6 +42,45 @@ let hostedUsable = true;
  */
 let hostedModel = '';
 
+/**
+ * When a rate limit lifts, as a timestamp. Set from whatever the 429 told us —
+ * our own route says so exactly, OpenRouter says so in a header — and until it
+ * passes the DJ does not ask again. Spending a request that is certain to fail
+ * is how a daily allowance disappears.
+ *
+ * Deliberately in memory, not storage: a reload costs one wasted request and
+ * cannot leave the DJ switched off by a stale number.
+ */
+let coolUntil = 0;
+
+/** How many of the account's allowance were left, last time it said. */
+let remaining: number | null = null;
+
+/**
+ * Whether a model took `json_schema`, remembered per id. A model that refuses
+ * it used to cost two upstream requests on every single ask — against a free
+ * tier of fifty a day, that halved the sets available for no benefit.
+ */
+const schemaMode = new Map<string, 'schema' | 'object'>();
+
+/** Seconds until the DJ will try again, or 0 if it will try now. */
+export function djCooldown(): number {
+  const left = coolUntil - Date.now();
+  return left > 0 ? Math.ceil(left / 1000) : 0;
+}
+
+/** "12 min" / "40 s" — a wait, said the way a person would say it. */
+export function formatWait(seconds: number): string {
+  if (seconds >= 5400) return `${Math.round(seconds / 3600)} h`;
+  if (seconds >= 90) return `${Math.round(seconds / 60)} min`;
+  return `${Math.max(1, Math.round(seconds))} s`;
+}
+
+/** What the account has left, when the last answer said. */
+export function djRemaining(): number | null {
+  return remaining;
+}
+
 export interface AiRequest {
   text: string;
   minutes: number;
@@ -187,11 +226,22 @@ function readSession(payload: unknown): AiSession | null {
   return null;
 }
 
-function describeError(status: number, body: string): AiError {
+function describeError(status: number, body: string, seconds = 0): AiError {
   const lower = body.toLowerCase();
   if (status === 401 || status === 403) return new AiError('That key was rejected', 'auth');
   if (status === 402 || lower.includes('credit')) return new AiError('Out of credit on that key', 'credit');
-  if (status === 429) return new AiError('Rate limited — try again shortly', 'rate');
+  if (status === 429) {
+    // Three different walls wearing one word. Ours we set and could raise;
+    // OpenRouter's free tier is 20 a minute and 50 a day until an account has
+    // bought credit. Saying which, and when it lifts, is the difference between
+    // a wait and a mystery.
+    const wait = seconds > 0 ? `, back in ${formatWait(seconds)}` : '';
+    if (lower.includes('"scope":"device"')) {
+      return new AiError(`Too many sets from this device${wait}`, 'rate');
+    }
+    if (seconds > 0) return new AiError(`The free tier is rate limiting${wait}`, 'rate');
+    return new AiError('Rate limited — the free tier allows 50 a day', 'rate');
+  }
   // The hosted route only forwards a short allow-list; your own key has no such
   // limit, so say which door to use rather than just refusing.
   if (lower.includes('model not allowed')) return new AiError('That model needs your own key', 'model');
@@ -212,7 +262,32 @@ function isSchemaComplaint(status: number, body: string): boolean {
   return lower.includes('response_format') || lower.includes('json_schema') || lower.includes('schema');
 }
 
-async function post(url: string, headers: Record<string, string>, body: unknown): Promise<{ status: number; text: string }> {
+interface Reply {
+  status: number;
+  text: string;
+  /** seconds, from Retry-After or X-RateLimit-Reset, when either was sent */
+  retryAfter: number;
+  /** requests left on the account, when it said */
+  remaining: number | null;
+}
+
+/**
+ * Read the wait out of a reply. `Retry-After` is seconds; OpenRouter's
+ * `X-RateLimit-Reset` is a unix time in milliseconds. Both mean the same thing
+ * to the caller, so both come back as seconds from now.
+ */
+function readWait(res: Response): number {
+  const after = Number(res.headers.get('retry-after'));
+  if (Number.isFinite(after) && after > 0) return Math.min(86_400, after);
+  const reset = Number(res.headers.get('x-ratelimit-reset'));
+  if (Number.isFinite(reset) && reset > 0) {
+    const seconds = Math.ceil((reset - Date.now()) / 1000);
+    if (seconds > 0) return Math.min(86_400, seconds);
+  }
+  return 0;
+}
+
+async function post(url: string, headers: Record<string, string>, body: unknown): Promise<Reply> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
@@ -222,7 +297,13 @@ async function post(url: string, headers: Record<string, string>, body: unknown)
       body: JSON.stringify(body),
       signal: controller.signal,
     });
-    return { status: res.status, text: await res.text() };
+    const left = Number(res.headers.get('x-ratelimit-remaining'));
+    return {
+      status: res.status,
+      text: await res.text(),
+      retryAfter: readWait(res),
+      remaining: Number.isFinite(left) ? left : null,
+    };
   } catch (err) {
     if ((err as Error).name === 'AbortError') throw new AiError('The DJ took too long', 'network');
     throw new AiError('Could not reach the DJ', 'network');
@@ -252,6 +333,11 @@ export async function requestSession(req: AiRequest): Promise<Script> {
   const route = aiRoute({ apiKey: req.apiKey, proxyUrl: req.proxyUrl ?? '' });
   if (route === 'none') throw new AiError('No DJ available — add a key', 'auth');
 
+  // Already told no, and told when to come back. Asking again would spend a
+  // request to be told the same thing.
+  const cooling = djCooldown();
+  if (cooling > 0) throw new AiError(`Rate limited — back in ${formatWait(cooling)}`, 'rate');
+
   const url = route === 'proxy' ? req.proxyUrl! : route === 'key' ? ENDPOINT : HOSTED;
   const headers: Record<string, string> = { 'content-type': 'application/json' };
   if (route === 'key') headers.authorization = `Bearer ${req.apiKey}`;
@@ -280,10 +366,27 @@ export async function requestSession(req: AiRequest): Promise<Script> {
   };
 
   // Ask for a schema-checked answer first; not every model on OpenRouter can do
-  // it, and the ones that can't say so with a 400 rather than a bad answer.
-  let response = await post(url, headers, { ...base, response_format: { type: 'json_schema', json_schema: SESSION_SCHEMA } });
-  if (isSchemaComplaint(response.status, response.text)) {
-    response = await post(url, headers, { ...base, response_format: { type: 'json_object' } });
+  // it, and the ones that can't say so with a 400 rather than a bad answer. Once
+  // a model has refused, remember it and ask the cheap way from then on: two
+  // requests per set is a luxury a fifty-a-day allowance cannot afford.
+  const schema = { type: 'json_schema', json_schema: SESSION_SCHEMA } as const;
+  const object = { type: 'json_object' } as const;
+  const known = schemaMode.get(req.model);
+
+  let response = await post(url, headers, { ...base, response_format: known === 'object' ? object : schema });
+  if (known !== 'object' && isSchemaComplaint(response.status, response.text)) {
+    schemaMode.set(req.model, 'object');
+    response = await post(url, headers, { ...base, response_format: object });
+  } else if (known === undefined && response.status < 400) {
+    schemaMode.set(req.model, 'schema');
+  }
+
+  if (response.remaining !== null) remaining = response.remaining;
+  if (response.status === 429) {
+    // A limit with no stated end still deserves a pause, or the next tap spends
+    // another request on the same refusal. A minute is short enough to be
+    // wrong about and long enough to matter.
+    coolUntil = Date.now() + (response.retryAfter > 0 ? response.retryAfter : 60) * 1000;
   }
   // A static host has no function behind that path. Stop asking, and let the
   // caller fall back — this is the ordinary case on a fork, not a failure.
@@ -291,7 +394,7 @@ export async function requestSession(req: AiRequest): Promise<Script> {
     hostedUsable = false;
     throw new AiError('No hosted DJ here — add a key', 'auth');
   }
-  if (response.status >= 400) throw describeError(response.status, response.text);
+  if (response.status >= 400) throw describeError(response.status, response.text, response.retryAfter);
 
   let payload: unknown;
   try {
@@ -317,6 +420,8 @@ export function aiAvailable(settings: { apiKey: string; proxyUrl: string }): boo
 
 /** One short label for the badge: which DJ will answer, in three words or less. */
 export function aiLabel(settings: { apiKey: string; proxyUrl: string; model: string }): string {
+  const cooling = djCooldown();
+  if (cooling > 0) return `waiting · ${formatWait(cooling)}`;
   const route = aiRoute(settings);
   if (route === 'proxy') return 'AI · proxy';
   if (route === 'key') return `AI · ${settings.model}`;

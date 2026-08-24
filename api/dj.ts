@@ -32,14 +32,26 @@ const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
  * set. Neither one means the four defaults below.
  */
 const DEFAULT_MODELS = [
-  // Free and able to hold a JSON schema, which is a short list. Paid ids work
-  // too — name them in DJ_MODEL or DJ_MODELS.
+  // Free, and able to hold a JSON schema — which most free models cannot.
   'z-ai/glm-5.2:free',
   'nvidia/nemotron-3-super-120b-a12b:free',
+  'nvidia/nemotron-nano-9b-v2:free',
   'openrouter/free',
-  'google/gemini-2.5-flash',
-  'anthropic/claude-sonnet-4.6',
 ];
+
+/**
+ * This deployment does not spend money. A free id on OpenRouter either ends in
+ * `:free` or is the free auto-router, so the rule is checkable — and checking
+ * it here means a typo in DJ_MODEL cannot quietly start billing an account.
+ * A fork that wants paid models sets DJ_ALLOW_PAID=1 and owns that decision.
+ */
+function isFree(id: string): boolean {
+  return id === 'openrouter/free' || id.endsWith(':free');
+}
+
+function paidAllowed(): boolean {
+  return process.env.DJ_ALLOW_PAID === '1';
+}
 
 /** Read per request, so a test can vary it and an env change needs no code. */
 function pinnedModel(): string {
@@ -58,8 +70,19 @@ const MAX_BODY_BYTES = 16_000;
  * asks for 4000 and a session is well under a thousand of them.
  */
 const MAX_TOKENS = 6000;
-const RATE_LIMIT = 20;
 const WINDOW_MS = 3_600_000;
+
+/**
+ * How many requests one address may make an hour, overridable with
+ * DJ_RATE_LIMIT. This is a brake on a runaway loop, not the account's spend
+ * guard — that is DJ_MODEL and a cap on OpenRouter. It used to be 20, which is
+ * tighter than OpenRouter's own free-tier allowance of 20 a *minute* and made
+ * this the first wall an ordinary session hit.
+ */
+function rateLimit(): number {
+  const n = Number(process.env.DJ_RATE_LIMIT);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 60;
+}
 
 /**
  * Per-IP counters in module memory. Edge instances come and go, so this is a
@@ -68,24 +91,34 @@ const WINDOW_MS = 3_600_000;
  */
 const hits = new Map<string, { count: number; until: number }>();
 
-function rateLimited(ip: string): boolean {
+/** Seconds until this address is allowed again, or 0 if it already is. */
+function retryAfter(ip: string): number {
   const now = Date.now();
   const seen = hits.get(ip);
   if (!seen || seen.until < now) {
     hits.set(ip, { count: 1, until: now + WINDOW_MS });
     if (hits.size > 5000) for (const [key, v] of hits) if (v.until < now) hits.delete(key);
-    return false;
+    return 0;
   }
   seen.count += 1;
-  return seen.count > RATE_LIMIT;
+  if (seen.count <= rateLimit()) return 0;
+  return Math.max(1, Math.ceil((seen.until - now) / 1000));
 }
 
-function json(body: unknown, status: number): Response {
+function json(body: unknown, status: number, extra?: Record<string, string>): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+    headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...extra },
   });
 }
+
+/**
+ * Which upstream headers reach the browser. OpenRouter says how long a rate
+ * limit lasts in these, and the app needs them to tell someone when the DJ is
+ * back rather than shrugging — dropping them was how "rate limited" became an
+ * unanswerable sentence.
+ */
+const PASS_THROUGH = ['retry-after', 'x-ratelimit-limit', 'x-ratelimit-remaining', 'x-ratelimit-reset'];
 
 export default async function handler(request: Request): Promise<Response> {
   if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
@@ -118,12 +151,26 @@ export default async function handler(request: Request): Promise<Response> {
   if (!pinned && !allowedModels().has(model)) {
     return json({ error: 'model not allowed' }, 400);
   }
+  // The one rule no list can enforce on its own.
+  if (!isFree(model) && !paidAllowed()) {
+    return json({ error: 'model not free', model }, 400);
+  }
   if (!Array.isArray(body.messages) || body.messages.length === 0) {
     return json({ error: 'messages required' }, 400);
   }
 
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-  if (rateLimited(ip)) return json({ error: 'rate limited' }, 429);
+  const wait = retryAfter(ip);
+  // `scope` is the whole point: the app has to tell this apart from
+  // OpenRouter's own 429, because the two clear at different times and only one
+  // of them is ours to raise.
+  if (wait > 0) {
+    return json(
+      { error: 'rate limited', scope: 'device', retryAfter: wait, limit: rateLimit() },
+      429,
+      { 'retry-after': String(wait) },
+    );
+  }
 
   let upstream: Response;
   try {
@@ -154,8 +201,11 @@ export default async function handler(request: Request): Promise<Response> {
   // a model. Report a refusal as a refusal, body intact.
   const status = upstream.status === 404 ? 502 : upstream.status;
 
-  return new Response(await upstream.text(), {
-    status,
-    headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-  });
+  const headers: Record<string, string> = { 'content-type': 'application/json', 'cache-control': 'no-store' };
+  for (const name of PASS_THROUGH) {
+    const value = upstream.headers.get(name);
+    if (value) headers[name] = value;
+  }
+
+  return new Response(await upstream.text(), { status, headers });
 }

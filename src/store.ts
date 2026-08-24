@@ -37,15 +37,15 @@ export interface State {
 const KEY = 'adhdmed.v1';
 
 /**
- * A short list from OpenRouter's catalogue, free first: this app is free, so its
- * default DJ should be too. Every id here can return a schema-checked answer,
- * which most free models cannot. The field takes any typed id.
+ * Free models only. This app is free, so its DJ is too — and every id here can
+ * return a schema-checked answer, which most free models cannot. The field
+ * takes any typed id, but the hosted route refuses one that costs money.
  */
 export const MODELS = [
-  { id: 'z-ai/glm-5.2:free', label: 'GLM', note: 'free · holds the schema' },
-  { id: 'nvidia/nemotron-3-super-120b-a12b:free', label: 'Nemotron', note: 'free · 120B' },
-  { id: 'openrouter/free', label: 'Auto', note: 'free · whichever is up' },
-  { id: 'anthropic/claude-sonnet-4.6', label: 'Sonnet', note: 'paid · best sessions' },
+  { id: 'z-ai/glm-5.2:free', label: 'GLM', note: 'holds the schema' },
+  { id: 'nvidia/nemotron-3-super-120b-a12b:free', label: 'Super', note: '120B, best sets' },
+  { id: 'nvidia/nemotron-nano-9b-v2:free', label: 'Nano', note: '9B, quickest' },
+  { id: 'openrouter/free', label: 'Auto', note: 'whichever is up' },
 ];
 
 const DEFAULTS: State = {
