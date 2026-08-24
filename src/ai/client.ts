@@ -263,8 +263,36 @@ function describeError(status: number, body: string, seconds = 0): AiError {
     return new AiError('OpenRouter settings block that model', 'model');
   }
   if (status === 404 || lower.includes('not a valid model')) return new AiError('That model is not available', 'model');
-  if (status >= 500) return new AiError('The DJ service is having trouble', 'network');
+  // Two ways to be too slow, and they deserve the same sentence: the hosted
+  // route ran out of its budget, or the platform killed it and left an HTML page
+  // where the JSON should be. Either way the model was the slow part, and the
+  // answer is a quicker one rather than a wait.
+  if (status === 504 || lower.includes('"scope":"timeout"') || lower.includes('function_invocation_timeout')) {
+    return new AiError('The model took too long — try a quicker one', 'network');
+  }
+  if (status >= 500) {
+    // OpenRouter's own words when it has any: "having trouble" is what we say
+    // when nobody told us anything.
+    const said = upstreamMessage(body);
+    return new AiError(said ? `OpenRouter: ${said}` : 'The DJ service is having trouble', 'network');
+  }
   return new AiError(`Request failed (${status})`, 'network');
+}
+
+/**
+ * The message inside an error body, short enough for a badge. OpenAI-compatible
+ * errors nest it under `error.message`; some hosts send a bare string.
+ */
+function upstreamMessage(body: string): string | null {
+  try {
+    const parsed = JSON.parse(body) as { error?: { message?: unknown } | string };
+    const raw = typeof parsed.error === 'string' ? parsed.error : parsed.error?.message;
+    if (typeof raw !== 'string' || !raw.trim()) return null;
+    const said = raw.trim().replace(/\s+/g, ' ');
+    return said.length > 60 ? `${said.slice(0, 57)}…` : said;
+  } catch {
+    return null;
+  }
 }
 
 /** True when the failure is the model refusing structured output rather than a real error. */
@@ -361,11 +389,12 @@ export async function requestSession(req: AiRequest): Promise<Script> {
     /**
      * Room for the answer *and* the thinking. Every free model on OpenRouter is
      * a reasoning model, and reasoning tokens are spent from this same budget —
-     * at 2000 a model could think its way past the end of the reply and return
+     * too small and a model thinks its way past the end of the reply and returns
      * nothing parseable. A set of eight segments is under a thousand tokens of
-     * JSON, so this is generous either way.
+     * JSON, so this is roughly triple what the answer needs while capping how
+     * long a slow model can hold the hosted route's 22-second budget.
      */
-    max_tokens: 4000,
+    max_tokens: 2500,
     /**
      * And ask it not to deliberate for long. This is a constrained design task
      * with the rules already written down, so low effort keeps both the budget

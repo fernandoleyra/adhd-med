@@ -73,6 +73,23 @@ const MAX_TOKENS = 6000;
 const WINDOW_MS = 3_600_000;
 
 /**
+ * How long this invocation may take.
+ *
+ * Vercel gives an Edge function 25 seconds to *begin* responding, then kills it
+ * with a 504 whose body is an HTML error page — a failure the app cannot read,
+ * so it can only shrug. Finishing inside our own budget means the reason always
+ * arrives as JSON.
+ */
+const BUDGET_MS = 22_000;
+
+/**
+ * A second model is only worth starting with this much budget left. A busy pool
+ * answers fast, so the fall-through almost always has room; a slow first attempt
+ * no longer gets to spend what remains and guarantee a timeout.
+ */
+const FALLBACK_MIN_MS = 8_000;
+
+/**
  * How many requests one address may make an hour, overridable with
  * DJ_RATE_LIMIT. This is a brake on a runaway loop, not the account's spend
  * guard — that is DJ_MODEL and a cap on OpenRouter. It used to be 20, which is
@@ -172,9 +189,14 @@ export default async function handler(request: Request): Promise<Response> {
     );
   }
 
+  const started = Date.now();
+  const left = () => BUDGET_MS - (Date.now() - started);
+
   const ask = (id: string) =>
     fetch(ENDPOINT, {
       method: 'POST',
+      // Our clock, not the platform's: an abort here is a 504 we can explain.
+      signal: AbortSignal.timeout(Math.max(1_000, left())),
       headers: {
         'content-type': 'application/json',
         authorization: `Bearer ${key}`,
@@ -207,10 +229,14 @@ export default async function handler(request: Request): Promise<Response> {
   let upstream: Response;
   try {
     upstream = await ask(candidates[0]!);
-    if ((upstream.status === 429 || upstream.status === 503) && candidates[1]) {
+    if ((upstream.status === 429 || upstream.status === 503) && candidates[1] && left() > FALLBACK_MIN_MS) {
       upstream = await ask(candidates[1]);
     }
-  } catch {
+  } catch (err) {
+    const name = (err as Error)?.name;
+    if (name === 'TimeoutError' || name === 'AbortError') {
+      return json({ error: 'upstream timed out', scope: 'timeout', ms: Date.now() - started }, 504);
+    }
     return json({ error: 'could not reach OpenRouter' }, 502);
   }
 

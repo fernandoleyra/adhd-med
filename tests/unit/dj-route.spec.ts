@@ -77,6 +77,9 @@ afterEach(() => {
     else process.env[k] = saved[k];
   }
   vi.unstubAllGlobals();
+  // The budget tests move the clock; leaving it moved would quietly poison the
+  // rate-limit tests, which read it.
+  vi.useRealTimers();
 });
 
 describe('the hosted DJ route', () => {
@@ -299,6 +302,66 @@ describe('the hosted DJ route', () => {
       const calls = stubSequence([{ status: 400, body: { error: 'bad request' } }]);
       expect((await handler(ask())).status).toBe(400);
       expect(calls, 'a 400 is not a busy pool').toHaveLength(1);
+    });
+  });
+
+  /**
+   * Vercel kills an Edge function that has not started responding in 25 seconds
+   * and leaves an HTML error page behind — which the app can only read as a
+   * shrug. Finishing inside our own budget keeps the reason in JSON.
+   */
+  describe('the invocation budget', () => {
+    it('says it timed out rather than letting the platform say nothing', async () => {
+      vi.stubGlobal('fetch', async () => {
+        throw Object.assign(new Error('The operation was aborted'), { name: 'TimeoutError' });
+      });
+      const res = await handler(ask());
+      expect(res.status).toBe(504);
+      expect(await res.json()).toMatchObject({ error: 'upstream timed out', scope: 'timeout' });
+    });
+
+    it('still calls an unreachable upstream unreachable', async () => {
+      vi.stubGlobal('fetch', async () => {
+        throw new TypeError('fetch failed');
+      });
+      expect((await handler(ask())).status).toBe(502);
+    });
+
+    it('gives each attempt a deadline', async () => {
+      const signals: (AbortSignal | null | undefined)[] = [];
+      vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+        signals.push(init.signal);
+        return new Response(JSON.stringify(OK), { status: 200 });
+      });
+      await handler(ask());
+      expect(signals[0], 'no deadline means the platform sets it').toBeInstanceOf(AbortSignal);
+    });
+
+    // The fall-through must not be what pushes an invocation over the edge.
+    it('skips the second model when the first one ate the budget', async () => {
+      process.env.DJ_MODELS = 'a/one:free, a/two:free';
+      const calls: string[] = [];
+      vi.useFakeTimers();
+      vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+        calls.push(JSON.parse(String(init.body)).model);
+        // A slow answer: eighteen seconds of a twenty-two second budget.
+        vi.setSystemTime(Date.now() + 18_000);
+        return new Response(JSON.stringify({ error: { code: 429 } }), {
+          status: 429,
+          headers: { 'retry-after': '5' },
+        });
+      });
+
+      const res = await handler(ask('a/one:free'));
+      expect(res.status).toBe(429);
+      expect(calls, 'one slow attempt is all there was room for').toEqual(['a/one:free']);
+    });
+
+    it('takes the second model when the first failed quickly', async () => {
+      process.env.DJ_MODELS = 'a/one:free, a/two:free';
+      const calls = stubSequence([{ status: 429, headers: { 'retry-after': '5' } }, { status: 200 }]);
+      expect((await handler(ask('a/one:free'))).status).toBe(200);
+      expect(calls).toHaveLength(2);
     });
   });
 
