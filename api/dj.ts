@@ -172,16 +172,15 @@ export default async function handler(request: Request): Promise<Response> {
     );
   }
 
-  let upstream: Response;
-  try {
-    upstream = await fetch(ENDPOINT, {
+  const ask = (id: string) =>
+    fetch(ENDPOINT, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model,
+        model: id,
         max_tokens: Math.min(MAX_TOKENS, Number(body.max_tokens) || MAX_TOKENS),
         temperature: typeof body.temperature === 'number' ? body.temperature : undefined,
         messages: body.messages,
@@ -191,6 +190,26 @@ export default async function handler(request: Request): Promise<Response> {
         reasoning: body.reasoning,
       }),
     });
+
+  /**
+   * The model asked for, then the others this deployment allows.
+   *
+   * OpenRouter answers 429 with a Retry-After when every provider it tried
+   * returned a retry hint — the model's pool is busy, and asking the same one
+   * again a few seconds later is a coin flip. A different free model has a
+   * different pool, and trying it costs no wait at all. Two at most, and no
+   * sleeping: an Edge function has no budget for sitting still.
+   */
+  const candidates = [model, ...allowedModels()].filter(
+    (id, i, all) => all.indexOf(id) === i && (isFree(id) || paidAllowed()),
+  ).slice(0, 2);
+
+  let upstream: Response;
+  try {
+    upstream = await ask(candidates[0]!);
+    if ((upstream.status === 429 || upstream.status === 503) && candidates[1]) {
+      upstream = await ask(candidates[1]);
+    }
   } catch {
     return json({ error: 'could not reach OpenRouter' }, 502);
   }

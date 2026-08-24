@@ -122,6 +122,13 @@ To host the AI DJ for everyone, three environment variables, all read by
 **Free models only, by default.** The route checks it rather than trusting the
 list, because a list drifts and a typo in `DJ_MODEL` would be a bill.
 
+**A busy model falls through to the next one.** OpenRouter answers 429 with a
+`Retry-After` when every provider it tried for a model returned a retry hint —
+the pool is busy, and asking the same one again a few seconds later is a coin
+flip. The route immediately tries the next model it allows instead, which has a
+different pool and costs no wait. Two models at most; the reply says which one
+answered, and the DJ badge shows it.
+
 Picking one: of OpenRouter's ~22 free models only six can return a strict JSON
 schema, which this app needs. `z-ai/glm-5.2:free` and
 `nvidia/nemotron-3-super-120b-a12b:free` both can, and both are large enough to

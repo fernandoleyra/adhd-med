@@ -12,7 +12,7 @@ import { renderCodex } from './modes/codex.js';
 import { renderDj } from './modes/dj.js';
 import { loadIntoLab, renderLab } from './modes/lab.js';
 import { renderLogos } from './modes/logos.js';
-import { openAirplane, registerServiceWorker } from './pwa/offline.js';
+import { offerUpdate, openAirplane, registerServiceWorker } from './pwa/offline.js';
 import { clearPayload, navigate, parseHash, startRouter } from './router.js';
 import { applyTheme, store } from './store.js';
 import { el, toast } from './ui/dom.js';
@@ -184,7 +184,9 @@ declare global {
       generate: typeof generate;
       encode: typeof encodeScript;
       decode: typeof decodeScript;
+      /** the update offer, so a test can prove an ordinary toast cannot eat it */
+      offerUpdate: typeof offerUpdate;
     };
   }
 }
-window.adhdmed = { engine, play: playScript, store, render: renderScript, generate, encode: encodeScript, decode: decodeScript };
+window.adhdmed = { engine, play: playScript, store, render: renderScript, generate, encode: encodeScript, decode: decodeScript, offerUpdate };

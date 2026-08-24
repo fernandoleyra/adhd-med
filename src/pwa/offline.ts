@@ -7,6 +7,7 @@
  * thing that needs the network is the AI DJ, which falls back to the scripted
  * generator without being asked.
  */
+import { engine } from '../audio/engine.js';
 import { el, openSheet, toast } from '../ui/dom.js';
 
 export interface CacheReport {
@@ -21,39 +22,91 @@ export interface CacheReport {
 
 const MANIFEST = `${import.meta.env.BASE_URL}precache.json`;
 
+/** Don't badger the network on every tab switch. */
+const RECHECK_MS = 60_000;
+let lastCheck = 0;
+
 export async function registerServiceWorker(): Promise<void> {
   if (!('serviceWorker' in navigator) || import.meta.env.DEV) return;
   try {
     const reg = await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, {
       scope: import.meta.env.BASE_URL,
     });
+
     reg.addEventListener('updatefound', () => {
       const next = reg.installing;
       next?.addEventListener('statechange', () => {
-        if (next.state === 'installed' && navigator.serviceWorker.controller) offerUpdate(reg);
+        if (next.state === 'installed' && navigator.serviceWorker.controller) handOver(reg, false);
       });
+    });
+
+    // A worker that finished installing before this page loaded is sitting in
+    // `waiting`, and `updatefound` will never fire again to mention it. Without
+    // this check the old worker keeps control until every tab closes, which is
+    // how a deploy can go unnoticed for days.
+    if (reg.waiting && navigator.serviceWorker.controller) handOver(reg, true);
+
+    // And ask, rather than waiting to be told: an installed app opened from the
+    // home screen may not navigate for a long time.
+    void recheck(reg);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') void recheck(reg);
     });
   } catch {
     // Offline support is a bonus, not a requirement.
   }
 }
 
-/** Never reload mid-session without asking — that would cut the sound off. */
-function offerUpdate(reg: ServiceWorkerRegistration): void {
-  const host = el('div', { id: 'toast', class: 'is-on', role: 'status' }, [
-    'A new version is ready. ',
-    el('button', {
-      class: 'ghost',
-      type: 'button',
-      style: { minHeight: '32px', padding: '0 10px', marginLeft: '8px' },
-      onclick: () => {
-        reg.waiting?.postMessage('SKIP_WAITING');
-        navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
-      },
-    }, ['Restart']),
-  ]);
-  document.getElementById('toast')?.remove();
-  document.body.appendChild(host);
+async function recheck(reg: ServiceWorkerRegistration): Promise<void> {
+  const now = Date.now();
+  if (now - lastCheck < RECHECK_MS) return;
+  lastCheck = now;
+  await reg.update().catch(() => undefined);
+}
+
+/**
+ * True when a new build can be taken without asking.
+ *
+ * The rule the old code was reaching for: never cut the sound off. That only
+ * applies while something is playing — at page load, with nothing playing,
+ * there is no session to interrupt and no half-typed sentence to lose, so the
+ * quiet thing to do is take the update and get on with it.
+ */
+export function canTakeSilently(atLoad: boolean, playing: boolean): boolean {
+  return atLoad && !playing;
+}
+
+function applyUpdate(reg: ServiceWorkerRegistration): void {
+  navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), { once: true });
+  reg.waiting?.postMessage('SKIP_WAITING');
+}
+
+function handOver(reg: ServiceWorkerRegistration, atLoad: boolean): void {
+  if (canTakeSilently(atLoad, engine.snapshot().status === 'playing')) {
+    applyUpdate(reg);
+    return;
+  }
+  offerUpdate(reg);
+}
+
+/**
+ * Mid-session: ask. Its own element, not `#toast` — `toast()` finds that one by
+ * id and overwrites its contents, which used to throw this button away a second
+ * after it appeared. No auto-hide either: an offer nobody saw is not an offer.
+ */
+export function offerUpdate(reg: ServiceWorkerRegistration): void {
+  document.getElementById('update')?.remove();
+  document.body.appendChild(
+    el('div', { id: 'update', class: 'is-on', role: 'status' }, [
+      'A new version is ready. ',
+      el('button', {
+        class: 'ghost',
+        type: 'button',
+        style: { minHeight: '32px', padding: '0 10px', marginLeft: '8px' },
+        onclick: () => applyUpdate(reg),
+      }, ['Restart']),
+    ]),
+  );
 }
 
 export async function cacheReport(): Promise<CacheReport> {
