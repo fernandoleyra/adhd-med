@@ -78,6 +78,44 @@ test.describe('airplane mode', () => {
   });
 });
 
+test.describe('updating', () => {
+  /**
+   * The app ran a two-day-old build because the update offer was built as
+   * `<div id="toast">`, and `toast()` finds that element by id and replaces its
+   * contents — so the next ordinary message threw the Restart button away. This
+   * is that bug, in a real browser.
+   */
+  test('an ordinary message cannot eat the update offer', async ({ page }) => {
+    await page.goto('./#/dj');
+    await dismissLeaflet(page);
+
+    const offer = () =>
+      page.evaluate(() => {
+        const fake = { waiting: { postMessage: () => undefined } } as unknown as ServiceWorkerRegistration;
+        window.adhdmed.offerUpdate(fake);
+      });
+
+    await offer();
+    const update = page.locator('#update');
+    await expect(update.getByRole('button', { name: 'Restart' })).toBeVisible();
+
+    // The real toast from the real path: with no hosted route on a preview
+    // build, asking for a set warns and falls back. This is the exact message
+    // that used to arrive and take the Restart button with it.
+    await page.getByRole('button', { name: 'AI set' }).click();
+    await page.getByRole('textbox', { name: /where you are/i }).fill('wired, need to write');
+    await page.locator('.commit button.primary').click();
+    await expect(page.locator('#toast')).toContainText('scripted DJ instead');
+
+    await expect(update, 'the offer outlives the message').toBeVisible();
+    await expect(update.getByRole('button', { name: 'Restart' })).toBeVisible();
+
+    // Offered twice, shown once.
+    await offer();
+    await expect(page.locator('#update')).toHaveCount(1);
+  });
+});
+
 test.describe('sharing', () => {
   test('a link carries the whole session, with no server involved', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);

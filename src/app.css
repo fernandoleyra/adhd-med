@@ -806,6 +806,27 @@ footer#foot a:hover { color: var(--accent); border-color: var(--accent); }
 #toast.is-on { opacity: 1; transform: translate(-50%, 0); }
 #toast[data-kind='warn'] { border-color: var(--warn); color: var(--warn); }
 
+/* The update offer. Same shape as a toast, its own element: a toast would
+   overwrite it, and this one has to stay until it is answered. */
+#update {
+  position: fixed;
+  left: 50%;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  transform: translate(-50%, 0);
+  z-index: 21;
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    var(--grad) border-box;
+  color: var(--ink);
+  font: 400 13px/1.4 var(--sans);
+  padding: var(--s3) var(--s4);
+  max-width: min(90vw, 44ch);
+}
+
 /* ---------- leaflet ---------- */
 
 .leaflet { max-width: 62ch; }

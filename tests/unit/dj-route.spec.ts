@@ -32,6 +32,18 @@ function stubUpstream(status = 200, body: unknown = OK, headers: Record<string, 
   return calls;
 }
 
+/** Answers each call in turn; the last reply repeats. Returns what was sent. */
+function stubSequence(replies: { status?: number; body?: unknown; headers?: Record<string, string> }[]) {
+  const calls: { model: string }[] = [];
+  let i = 0;
+  vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+    calls.push({ model: JSON.parse(String(init.body)).model });
+    const r = replies[Math.min(i++, replies.length - 1)]!;
+    return new Response(JSON.stringify(r.body ?? OK), { status: r.status ?? 200, headers: r.headers ?? {} });
+  });
+  return calls;
+}
+
 /** A request from a named address, so the per-IP limiter can be exercised. */
 function askFrom(ip: string): Request {
   return new Request('https://example.test/api/dj', {
@@ -239,6 +251,55 @@ describe('the hosted DJ route', () => {
     expect(res.headers.get('retry-after')).toBe('42');
     expect(res.headers.get('x-ratelimit-remaining')).toBe('0');
     expect(res.headers.get('x-ratelimit-reset')).toBe('1700000000000');
+  });
+
+  /**
+   * OpenRouter sends Retry-After when every provider for a model returned a
+   * retry hint. Waiting for that same pool is a coin flip; a different free
+   * model has a different pool and costs no wait.
+   */
+  describe('a busy model', () => {
+    it('falls through to the next free one', async () => {
+      process.env.DJ_MODELS = 'a/one:free, a/two:free';
+      const calls = stubSequence([
+        { status: 429, body: { error: { code: 429, message: 'Rate limit exceeded' } }, headers: { 'retry-after': '5' } },
+        { status: 200 },
+      ]);
+      const res = await handler(ask('a/one:free'));
+      expect(res.status).toBe(200);
+      expect(calls.map((c) => c.model)).toEqual(['a/one:free', 'a/two:free']);
+    });
+
+    it('does the same for a 503', async () => {
+      process.env.DJ_MODELS = 'a/one:free, a/two:free';
+      const calls = stubSequence([{ status: 503 }, { status: 200 }]);
+      expect((await handler(ask('a/one:free'))).status).toBe(200);
+      expect(calls).toHaveLength(2);
+    });
+
+    it('tries two models, not the whole list', async () => {
+      process.env.DJ_MODELS = 'a/one:free, a/two:free, a/three:free, a/four:free';
+      const calls = stubSequence([{ status: 429, headers: { 'retry-after': '5' } }]);
+      const res = await handler(ask('a/one:free'));
+      expect(res.status).toBe(429);
+      expect(calls).toHaveLength(2);
+      // and the wait still reaches the browser, so it can decide to hold off
+      expect(res.headers.get('retry-after')).toBe('5');
+    });
+
+    it('never falls through to a model that costs money', async () => {
+      process.env.DJ_MODEL = 'a/one:free';
+      process.env.DJ_MODELS = 'anthropic/claude-sonnet-4.6';
+      const calls = stubSequence([{ status: 429, headers: { 'retry-after': '5' } }]);
+      await handler(ask('a/one:free'));
+      expect(calls.map((c) => c.model)).toEqual(['a/one:free']);
+    });
+
+    it('leaves an ordinary failure alone', async () => {
+      const calls = stubSequence([{ status: 400, body: { error: 'bad request' } }]);
+      expect((await handler(ask())).status).toBe(400);
+      expect(calls, 'a 400 is not a busy pool').toHaveLength(1);
+    });
   });
 
   it('refuses a body far larger than any session prompt', async () => {
