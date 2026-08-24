@@ -16,7 +16,7 @@ import { openAirplane, registerServiceWorker } from './pwa/offline.js';
 import { clearPayload, navigate, parseHash, startRouter } from './router.js';
 import { applyTheme, store } from './store.js';
 import { el, toast } from './ui/dom.js';
-import { DISCLAIMER_SHORT, openFirstRun, openLeaflet } from './ui/leaflet.js';
+import { openFirstRun, openLeaflet } from './ui/leaflet.js';
 import { openLibrary, referenceCount } from './ui/library.js';
 import { mountMini, openSession, playScript } from './ui/player.js';
 import { openSettings } from './ui/settings.js';
@@ -78,7 +78,6 @@ function mountFooter(host: HTMLElement): void {
     link('Insert', () => openLeaflet()),
     link('About', () => navigate('/about')),
     el('a', { href: REPO, target: '_blank', rel: 'noopener noreferrer' }, ['Source']),
-    el('span', { class: 'disc', text: DISCLAIMER_SHORT }),
   );
 }
 

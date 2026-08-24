@@ -2,17 +2,25 @@ import { expect, test } from '@playwright/test';
 import { dismissLeaflet, gotoRoute } from './helpers.js';
 
 test.describe('the app works on a phone', () => {
-  test('the first run leads with the disclaimer and asks one question', async ({ page }) => {
+  test('the first run leads with the facts and asks one question', async ({ page }) => {
     await page.goto('./');
     const sheet = page.getByRole('dialog', { name: /Before you start/i });
     await expect(sheet).toBeVisible();
-    await expect(sheet).toContainText('Not a medical device');
+    // Facts first: active ingredient, evidence, dose, what to avoid.
     await expect(sheet).toContainText('Evidence');
-    // The long version is there, folded away rather than shouted.
+    await expect(sheet).toContainText('limiter always on');
+    // The app never claims to be medicine, so it does not open by denying it.
+    // The disclaimer is the last thing in the reading, not the first thing on
+    // screen — the inverse of an earlier assertion, on purpose. Visibility, not
+    // text: a closed <details> still carries its content in the DOM.
+    const disclaimer = sheet.getByRole('heading', { name: 'Not a medical device' });
+    await expect(disclaimer).toBeHidden();
+
     await expect(sheet.getByText('the long version')).toBeVisible();
-    await expect(sheet).not.toContainText('frequency-following');
     await sheet.getByText('the long version').click();
     await expect(sheet).toContainText('ADHD trials are the weak spot');
+    await expect(disclaimer).toBeVisible();
+    await expect(sheet).toContainText('real treatment works');
 
     await page.getByRole('button', { name: 'Begin', exact: true }).click();
     await expect(sheet).toBeHidden();
@@ -100,12 +108,15 @@ test.describe('the app works on a phone', () => {
     }
   });
 
-  test('the footer carries the library and the disclaimer', async ({ page }) => {
+  test('the footer carries the library, the insert and the source', async ({ page }) => {
     await page.goto('./');
     await dismissLeaflet(page);
     const foot = page.locator('#foot');
     await expect(foot).toContainText(/Library \d+/);
-    await expect(foot).toContainText('Not a medical device');
+    // No disclaimer strip on every screen any more: it lives once, at the end
+    // of the insert, which is one tap from here.
+    await expect(foot).not.toContainText('Not a medical device');
+    await expect(foot.getByRole('link', { name: 'Insert' })).toBeVisible();
     await foot.getByRole('link', { name: /Library/ }).click();
     const sheet = page.getByRole('dialog', { name: 'Library' });
     await expect(sheet).toBeVisible();
@@ -116,6 +127,21 @@ test.describe('the app works on a phone', () => {
     // topic filter narrows it
     await sheet.getByRole('button', { name: /Attention, arousal/ }).click();
     await expect(sheet).toContainText('Söderlund');
+  });
+
+  test('the insert keeps the disclaimer, at the end of the reading', async ({ page }) => {
+    await page.goto('./');
+    await dismissLeaflet(page);
+    await page.locator('#foot').getByRole('link', { name: 'Insert' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Insert' });
+    await expect(sheet).toBeVisible();
+    const disclaimer = sheet.getByRole('heading', { name: 'Not a medical device' });
+    await expect(disclaimer).toBeHidden();
+    await sheet.getByText('the long version').click();
+    await expect(disclaimer).toBeVisible();
+    // Last, not first: everything else in the reading comes before it.
+    const text = (await sheet.textContent()) ?? '';
+    expect(text.indexOf('Not a medical device')).toBeGreaterThan(text.indexOf('ADHD trials are the weak spot'));
   });
 
   test('the quick path plays what its chips say', async ({ page }) => {
@@ -230,6 +256,9 @@ test.describe('the app works on a phone', () => {
     await expect(page.locator('.block').filter({ hasText: 'COLOUR' })).toContainText(/violet · 4\d\d nm · 1\d\d\.\d\d Hz/);
 
     await page.locator('.commit button.primary').click();
+    // The set path asks the hosted route first, so the fallback lands after a
+    // round trip. Wait for the card rather than racing it.
+    await expect(page.locator('.card').first()).toBeVisible();
     const carrier = await page.evaluate(() => {
       const script = window.adhdmed.engine.snapshot().script!;
       return script.segments[0]!.layers[0]!.carrier;

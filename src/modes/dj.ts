@@ -319,9 +319,10 @@ export function renderDj(host: HTMLElement): void {
     });
     syncColour();
 
+    const askLabel = el('span', { text: 'DJ a set' });
     const askBtn = el('button', { class: 'primary wide', type: 'button' }, [
       el('span', { class: 'play-mark', 'aria-hidden': 'true', text: '▶' }),
-      el('span', { text: 'DJ a set' }),
+      askLabel,
     ]);
 
     askBtn.addEventListener('click', async () => {
@@ -359,6 +360,10 @@ export function renderDj(host: HTMLElement): void {
           proxyUrl: store.settings.proxyUrl || undefined,
           root,
           rootFrom: reading ? `${reading.name}, ${reading.wavelength.toFixed(0)} nm` : undefined,
+          // A silent five-second pause looks like a hang. Say what it is.
+          onwait: (seconds) => {
+            askLabel.textContent = `waiting ${seconds} s…`;
+          },
         });
         show(script, aiLabel(store.settings));
       } catch (err) {
@@ -372,6 +377,7 @@ export function renderDj(host: HTMLElement): void {
         state.busy = false;
         askBtn.disabled = false;
         askBtn.classList.remove('is-busy');
+        askLabel.textContent = 'DJ a set';
         // Whether this deployment has a hosted DJ is only learned by asking.
         refreshOrb();
       }

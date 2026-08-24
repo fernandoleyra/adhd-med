@@ -594,7 +594,6 @@ dl.facts dt {
 dl.facts dd { margin: 0; font-size: 14px; }
 dl.facts.mono-dd dd { font: 400 13px/1.6 var(--mono); }
 
-.insert-lede { font-size: 16px; margin: 0 0 var(--s4); }
 
 /* ---------- folds ---------- */
 
@@ -681,7 +680,6 @@ footer#foot {
 
 footer#foot a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--hairline); }
 footer#foot a:hover { color: var(--accent); border-color: var(--accent); }
-footer#foot .disc { flex-basis: 100%; max-width: 62ch; }
 
 /* ---------- bottom bars ---------- */
 
