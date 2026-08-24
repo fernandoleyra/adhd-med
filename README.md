@@ -119,6 +119,14 @@ To host the AI DJ for everyone, three environment variables, all read by
 | `DJ_RATE_LIMIT` | requests per hour per address, default 60. A brake on a runaway loop, not a spend guard. |
 | `DJ_ALLOW_PAID` | set to `1` to permit a model that costs money. Without it the route refuses any id that is not `openrouter/free` or `…:free`, so a typo cannot start billing. |
 
+**The route finishes in 22 seconds or explains itself.** Vercel gives an Edge
+function 25 seconds to begin responding and then kills it with an HTML error
+page, which an app can only report as a shrug. Each upstream attempt carries a
+deadline, the busy-model fall-through only starts with real budget left, and a
+timeout comes back as JSON — so the DJ can say "the model took too long" and
+point at a quicker one. `nvidia/nemotron-nano-9b-v2:free` is the quickest of the
+free models that can hold a schema.
+
 **Free models only, by default.** The route checks it rather than trusting the
 list, because a list drifts and a typo in `DJ_MODEL` would be a bill.
 

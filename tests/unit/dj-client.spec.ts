@@ -216,7 +216,52 @@ describe('the cost of one set', () => {
   it('gives a reasoning model room, and asks it not to dawdle', async () => {
     const sent = stub([{ status: 200 }]);
     await ask('budget/check:free');
-    expect(sent[0]!.body.max_tokens).toBe(4000);
+    // Triple what the JSON needs, and small enough that a slow model cannot
+    // hold the hosted route past its own deadline.
+    expect(sent[0]!.body.max_tokens).toBe(2500);
     expect(sent[0]!.body.reasoning).toEqual({ effort: 'low' });
+  });
+});
+
+/**
+ * "The DJ service is having trouble" was one sentence over three causes, the
+ * same failure of nerve as "rate limited". A model that was too slow, an
+ * upstream that erred, and a route that could not be reached want different
+ * answers from the listener.
+ */
+describe('a 5xx says which kind', () => {
+  it('reads our own timeout as one', async () => {
+    stub([{ status: 504, body: { error: 'upstream timed out', scope: 'timeout', ms: 22000 } }]);
+    const err = (await ask().catch((e) => e)) as InstanceType<Client['AiError']>;
+    expect(err.message).toContain('took too long');
+    // Waiting does not make a model faster, so nothing is put on hold.
+    expect(client.djCooldown()).toBe(0);
+  });
+
+  // The platform's own kill leaves HTML where the JSON should be.
+  it('reads the platform\'s timeout as one too, HTML body and all', async () => {
+    stub([{ status: 504, body: '<!DOCTYPE html><h1>504: FUNCTION_INVOCATION_TIMEOUT</h1>' }]);
+    const err = (await ask().catch((e) => e)) as InstanceType<Client['AiError']>;
+    expect(err.message).toContain('took too long');
+  });
+
+  it('passes on what OpenRouter actually said', async () => {
+    stub([{ status: 502, body: { error: { message: 'Provider returned an internal error' } } }]);
+    const err = (await ask().catch((e) => e)) as InstanceType<Client['AiError']>;
+    expect(err.message).toContain('OpenRouter');
+    expect(err.message).toContain('Provider returned an internal error');
+  });
+
+  it('trims a message too long for a badge', async () => {
+    stub([{ status: 502, body: { error: { message: 'x'.repeat(300) } } }]);
+    const err = (await ask().catch((e) => e)) as InstanceType<Client['AiError']>;
+    expect(err.message.length).toBeLessThan(90);
+    expect(err.message).toContain('…');
+  });
+
+  it('falls back to plain words when nobody said anything', async () => {
+    stub([{ status: 500, body: {} }]);
+    const err = (await ask().catch((e) => e)) as InstanceType<Client['AiError']>;
+    expect(err.message).toBe('The DJ service is having trouble');
   });
 });
