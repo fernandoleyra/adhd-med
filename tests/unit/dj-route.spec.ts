@@ -23,21 +23,30 @@ function ask(model = 'openrouter/free'): Request {
 }
 
 /** Captures what was forwarded upstream, and answers with `status`/`body`. */
-function stubUpstream(status = 200, body: unknown = OK) {
+function stubUpstream(status = 200, body: unknown = OK, headers: Record<string, string> = {}) {
   const calls: { url: string; body: Record<string, unknown> }[] = [];
   vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
     calls.push({ url: String(url), body: JSON.parse(String(init.body)) });
-    return new Response(JSON.stringify(body), { status });
+    return new Response(JSON.stringify(body), { status, headers });
   });
   return calls;
 }
 
+/** A request from a named address, so the per-IP limiter can be exercised. */
+function askFrom(ip: string): Request {
+  return new Request('https://example.test/api/dj', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-forwarded-for': ip },
+    body: JSON.stringify({ model: 'openrouter/free', messages: [{ role: 'user', content: 'hi' }] }),
+  });
+}
+
 /**
- * Note for whoever adds a test here: the route's per-IP rate limit lives in
- * module memory and these all share one IP, so more than 20 requests that
- * reach upstream will start coming back 429.
+ * Note for whoever adds a test here: the route's per-IP counters live in module
+ * memory and outlive a single test, so the setup raises DJ_RATE_LIMIT out of the
+ * way and the limiter's own tests use their own addresses.
  */
-const ENV_KEYS = ['OPENROUTER_API_KEY', 'DJ_MODEL', 'DJ_MODELS'] as const;
+const ENV_KEYS = ['OPENROUTER_API_KEY', 'DJ_MODEL', 'DJ_MODELS', 'DJ_RATE_LIMIT', 'DJ_ALLOW_PAID'] as const;
 const saved: Record<string, string | undefined> = {};
 
 beforeEach(() => {
@@ -45,6 +54,9 @@ beforeEach(() => {
   process.env.OPENROUTER_API_KEY = 'test-key';
   delete process.env.DJ_MODEL;
   delete process.env.DJ_MODELS;
+  delete process.env.DJ_ALLOW_PAID;
+  // A limit high enough that only the tests that mean to hit it, do.
+  process.env.DJ_RATE_LIMIT = '10000';
 });
 
 afterEach(() => {
@@ -82,18 +94,18 @@ describe('the hosted DJ route', () => {
   });
 
   it('DJ_MODEL needs no place on the allow-list', async () => {
-    process.env.DJ_MODEL = 'some/obscure-model';
+    process.env.DJ_MODEL = 'some/obscure-model:free';
     const calls = stubUpstream();
-    const res = await handler(ask('some/obscure-model'));
+    const res = await handler(ask('some/obscure-model:free'));
     expect(res.status).toBe(200);
-    expect(calls[0]!.body.model).toBe('some/obscure-model');
+    expect(calls[0]!.body.model).toBe('some/obscure-model:free');
   });
 
   it('DJ_MODELS replaces the allow-list the browser may choose from', async () => {
-    process.env.DJ_MODELS = 'a/one, a/two';
+    process.env.DJ_MODELS = 'a/one:free, a/two:free';
     const calls = stubUpstream();
-    expect((await handler(ask('a/two'))).status).toBe(200);
-    expect(calls[0]!.body.model).toBe('a/two');
+    expect((await handler(ask('a/two:free'))).status).toBe(200);
+    expect(calls[0]!.body.model).toBe('a/two:free');
     // and the defaults no longer apply
     expect((await handler(ask('openrouter/free'))).status).toBe(400);
   });
@@ -152,6 +164,81 @@ describe('the hosted DJ route', () => {
   it('passes other upstream failures through unchanged', async () => {
     stubUpstream(429, { error: 'slow down' });
     expect((await handler(ask())).status).toBe(429);
+  });
+
+  // This deployment does not spend money, and a list is not enough to promise
+  // that — a typo in DJ_MODEL would be a bill.
+  it('refuses a model that is not free, however it was named', async () => {
+    process.env.DJ_MODELS = 'anthropic/claude-sonnet-4.6';
+    const calls = stubUpstream();
+    const res = await handler(ask('anthropic/claude-sonnet-4.6'));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: 'model not free' });
+    expect(calls).toHaveLength(0);
+  });
+
+  it('refuses a paid model even when it is pinned', async () => {
+    process.env.DJ_MODEL = 'openai/gpt-5.2';
+    const calls = stubUpstream();
+    expect((await handler(ask())).status).toBe(400);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('lets a fork opt into paying, explicitly', async () => {
+    process.env.DJ_MODEL = 'openai/gpt-5.2';
+    process.env.DJ_ALLOW_PAID = '1';
+    const calls = stubUpstream();
+    expect((await handler(ask())).status).toBe(200);
+    expect(calls[0]!.body.model).toBe('openai/gpt-5.2');
+  });
+
+  it('takes the free auto-router, which has no :free suffix', async () => {
+    const calls = stubUpstream();
+    expect((await handler(ask('openrouter/free'))).status).toBe(200);
+    expect(calls).toHaveLength(1);
+  });
+
+  // "Rate limited" has to say whose limit it was. Ours is the one this
+  // deployment can raise; OpenRouter's is not.
+  describe('its own rate limit', () => {
+    it('says whose limit it is, and for how long', async () => {
+      process.env.DJ_RATE_LIMIT = '2';
+      stubUpstream();
+      expect((await handler(askFrom('1.1.1.1'))).status).toBe(200);
+      expect((await handler(askFrom('1.1.1.1'))).status).toBe(200);
+
+      const res = await handler(askFrom('1.1.1.1'));
+      expect(res.status).toBe(429);
+      const body = await res.json();
+      expect(body).toMatchObject({ error: 'rate limited', scope: 'device', limit: 2 });
+      expect(body.retryAfter).toBeGreaterThan(0);
+      expect(body.retryAfter).toBeLessThanOrEqual(3600);
+      expect(Number(res.headers.get('retry-after'))).toBe(body.retryAfter);
+    });
+
+    it('counts per address, so one visitor cannot lock out another', async () => {
+      process.env.DJ_RATE_LIMIT = '1';
+      stubUpstream();
+      expect((await handler(askFrom('2.2.2.2'))).status).toBe(200);
+      expect((await handler(askFrom('2.2.2.2'))).status).toBe(429);
+      expect((await handler(askFrom('3.3.3.3'))).status).toBe(200);
+    });
+  });
+
+  // The reset time is the whole answer to "when will it work again", and this
+  // route used to drop it on the floor.
+  it('passes the upstream rate-limit headers through', async () => {
+    stubUpstream(429, { error: { code: 429, message: 'Rate limit exceeded' } }, {
+      'retry-after': '42',
+      'x-ratelimit-limit': '50',
+      'x-ratelimit-remaining': '0',
+      'x-ratelimit-reset': '1700000000000',
+    });
+    const res = await handler(ask());
+    expect(res.status).toBe(429);
+    expect(res.headers.get('retry-after')).toBe('42');
+    expect(res.headers.get('x-ratelimit-remaining')).toBe('0');
+    expect(res.headers.get('x-ratelimit-reset')).toBe('1700000000000');
   });
 
   it('refuses a body far larger than any session prompt', async () => {

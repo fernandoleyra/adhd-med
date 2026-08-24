@@ -114,16 +114,29 @@ To host the AI DJ for everyone, three environment variables, all read by
 | | |
 |---|---|
 | `OPENROUTER_API_KEY` | required. Without it the route answers 501 and the app quietly uses the scripted DJ. |
-| `DJ_MODEL` | pins one model, in OpenRouter's `vendor/model` naming (e.g. `z-ai/glm-5.2:free`). Whatever a visitor's browser asks for, this answers — the deployment pays, so the deployment chooses. |
-| `DJ_MODELS` | comma-separated allow-list a visitor may pick from, replacing the four built-in defaults. Ignored when `DJ_MODEL` is set. |
+| `DJ_MODEL` | pins one model, in OpenRouter's `vendor/model` naming (e.g. `z-ai/glm-5.2:free`). Whatever a visitor's browser asks for, this answers — the deployment carries the account, so the deployment chooses. |
+| `DJ_MODELS` | comma-separated allow-list a visitor may pick from, replacing the built-in defaults. Ignored when `DJ_MODEL` is set. |
+| `DJ_RATE_LIMIT` | requests per hour per address, default 60. A brake on a runaway loop, not a spend guard. |
+| `DJ_ALLOW_PAID` | set to `1` to permit a model that costs money. Without it the route refuses any id that is not `openrouter/free` or `…:free`, so a typo cannot start billing. |
 
-Picking a free one: of OpenRouter's ~22 free models only a handful can return a
-strict JSON schema, which this app needs. `z-ai/glm-5.2:free` and
+**Free models only, by default.** The route checks it rather than trusting the
+list, because a list drifts and a typo in `DJ_MODEL` would be a bill.
+
+Picking one: of OpenRouter's ~22 free models only six can return a strict JSON
+schema, which this app needs. `z-ai/glm-5.2:free` and
 `nvidia/nemotron-3-super-120b-a12b:free` both can, and both are large enough to
 follow the band rules; `openrouter/free` routes to whatever is up, so its
 sessions vary in style. Free models are all reasoning models, and OpenRouter
 spends reasoning tokens out of `max_tokens` — which is why the DJ asks for 4000
 of them and sends `reasoning: {effort: 'low'}`.
+
+**The allowance is the thing to know about.** Free models are capped at 20
+requests a minute and **50 a day** until an account has bought 10 credits
+all-time, which raises it to 1000 a day. The app is built for that: one request
+per session (it remembers which models refuse a JSON schema rather than retrying
+every time), and when a limit does land it says whose limit it was and when it
+lifts, then stops asking until then. A rate-limited DJ falls back to the
+scripted arcs, which need no allowance at all.
 
 Worth knowing before you pick: OpenRouter's own **allowed providers** and **data
 policy** settings can refuse every model here. A narrowed provider list rules

@@ -184,6 +184,43 @@ test.describe('the app works on a phone', () => {
     await expect(page.locator('.card').first()).toContainText(/Deep Work|Deep work/i);
   });
 
+  /**
+   * A refusal already given is not worth a request. With the route answering
+   * 429, the set path has to fall back, say when the DJ is back, and then stop
+   * spending an allowance it has been told is empty.
+   */
+  test('a rate limit stops the DJ asking, and says when it is back', async ({ page }) => {
+    await page.route('**/api/dj', (route) =>
+      route.fulfill({
+        status: 429,
+        headers: { 'content-type': 'application/json', 'retry-after': '900' },
+        body: JSON.stringify({ error: 'rate limited', scope: 'device', retryAfter: 900, limit: 60 }),
+      }),
+    );
+    const asks: string[] = [];
+    page.on('request', (r) => {
+      if (r.url().includes('/api/dj')) asks.push(r.url());
+    });
+
+    await gotoRoute(page, '/dj');
+    await page.getByRole('button', { name: 'AI set' }).click();
+    await page.getByRole('textbox', { name: /where you are/i }).fill('wired from coffee, need to write');
+
+    await page.locator('.commit button.primary').click();
+    await expect(page.locator('.badge').filter({ hasText: /this device/ }).first()).toBeVisible();
+    await expect(page.locator('.badge').filter({ hasText: /15 min/ }).first()).toBeVisible();
+    // It still plays: the scripted DJ needs no allowance.
+    expect(await page.evaluate(() => window.adhdmed.engine.snapshot().status)).toBe('playing');
+    expect(asks).toHaveLength(1);
+
+    // And the orb stops claiming to be live while the wait is on.
+    await expect(page.locator('.orb')).not.toHaveClass(/is-live/);
+
+    await page.locator('.commit button.primary').click();
+    await expect(page.locator('.badge').filter({ hasText: /back in/ }).first()).toBeVisible();
+    expect(asks, 'a second tap must not spend a request').toHaveLength(1);
+  });
+
   test('a colour is an input on its own, and shows its arithmetic', async ({ page }) => {
     await gotoRoute(page, '/dj');
     await page.getByRole('button', { name: 'AI set' }).click();
