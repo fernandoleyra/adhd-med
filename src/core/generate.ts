@@ -342,46 +342,6 @@ export function preset(id: string, method?: Method): Script | null {
   return script;
 }
 
-/**
- * Read free text without a model: keyword match onto tags. This is what the DJ
- * falls back to offline, or when a request fails — same grammar, no network.
- */
-export function inferTags(text: string): { goal: GoalId; moods: MoodId[]; minutes: number } {
-  const t = ` ${text.toLowerCase()} `;
-  const has = (...words: string[]) => words.some((w) => t.includes(w));
-
-  let goal: GoalId = 'focus';
-  if (has('sleep', 'insomnia', 'bed', 'night', 'nap')) goal = 'sleep';
-  else if (has('meditat', 'breath', 'mindful', 'zen')) goal = 'meditate';
-  else if (has('anx', 'panic', 'calm', 'stress', 'overwhelm', 'spiral')) goal = 'calm';
-  else if (has('unwind', 'evening', 'wind down', 'after work', 'decompress')) goal = 'unwind';
-  else if (has('read', 'book', 'paper', 'article')) goal = 'read';
-  else if (has('study', 'revis', 'exam', 'learn', 'memoris', 'memoriz')) goal = 'study';
-  else if (has('deep work', 'flow', 'code', 'write', 'thesis', 'long session')) goal = 'deep';
-  else if (has('energ', 'wake', 'boost', 'spark', 'gamma', 'jolt')) goal = 'spark';
-
-  const moods: MoodId[] = [];
-  if (has('restless', 'fidget', 'antsy', "can't sit", 'cant sit', 'bouncing')) moods.push('restless');
-  if (has('foggy', 'fog', 'brain fog', 'slow', 'muddy', 'blank')) moods.push('foggy');
-  if (has('anx', 'nervous', 'panic', 'worried', 'dread')) moods.push('anxious');
-  if (has('wired', 'buzzing', 'overstim', 'too much coffee', 'caffeine', 'jittery')) moods.push('wired');
-  if (has('tired', 'exhaust', 'sleepy', 'drained', 'knackered')) moods.push('tired');
-  if (has('low', 'sad', 'flat', 'down', 'unmotivat')) moods.push('low');
-
-  let minutes = goal === 'sleep' ? 45 : goal === 'spark' ? 10 : 25;
-  const explicit = t.match(/(\d{1,3})\s*(min|minute|m\b|hour|hr|h\b)/);
-  if (explicit) {
-    const n = Number(explicit[1]);
-    const unit = explicit[2] ?? 'min';
-    minutes = unit.startsWith('h') ? n * 60 : n;
-  } else if (has('pomodoro')) minutes = 25;
-  else if (has('quick', 'short', 'few minutes')) minutes = 10;
-  else if (has('long', 'all afternoon', 'all morning', 'hours')) minutes = 90;
-  minutes = Math.max(3, Math.min(180, minutes));
-
-  return { goal, moods: moods.slice(0, 3), minutes };
-}
-
 /** A single random-but-reproducible session, for the "surprise me" button. */
 export function surprise(seed: number): Script {
   const random = rng(seed);

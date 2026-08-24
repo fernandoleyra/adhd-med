@@ -96,7 +96,9 @@ test.describe('the app works on a phone', () => {
     await dismissLeaflet(page);
 
     for (const [route, heading] of [
-      ['/dj', 'DJ'],
+      // The DJ names itself in the tab bar and its sections label themselves,
+      // so its first heading is the first choice you make.
+      ['/dj', 'Goal'],
       ['/lab', 'Lab'],
       ['/codex', 'Codex'],
       ['/logos', 'Logos'],
@@ -144,14 +146,14 @@ test.describe('the app works on a phone', () => {
     expect(text.indexOf('Not a medical device')).toBeGreaterThan(text.indexOf('ADHD trials are the weak spot'));
   });
 
-  test('the quick path plays what its chips say', async ({ page }) => {
+  test('the DJ plays what its chips say', async ({ page }) => {
     await gotoRoute(page, '/dj');
     await page.getByRole('button', { name: 'Focus', exact: true }).click();
     await page.getByRole('button', { name: 'restless' }).click();
     await page.getByRole('button', { name: '25 min', exact: true }).click();
 
     // The action carries the choices, so you can see what will play before it
-    // does — this was the complaint the two paths exist to answer.
+    // does, before it does it.
     const play = page.locator('.commit button.primary');
     await expect(play).toContainText('Focus · restless · 25 min');
     await play.click();
@@ -183,81 +185,16 @@ test.describe('the app works on a phone', () => {
     expect(state.energy).toBeGreaterThan(0.001);
   });
 
-  test('the two paths are different things, and the app remembers which', async ({ page }) => {
+  test('a colour is an input, and shows its arithmetic', async ({ page }) => {
     await gotoRoute(page, '/dj');
-    // Quick is the default: it works with no network at all.
-    await expect(page.getByRole('button', { name: 'Quick' })).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('.commit button.primary')).toContainText('min');
-
-    await page.getByRole('button', { name: 'AI set' }).click();
-    await expect(page.getByRole('button', { name: 'AI set' })).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('.commit button.primary')).toContainText('DJ a set');
-    // Goal, feel and time belong to Quick; this path takes words and a colour.
-    await expect(page.getByRole('button', { name: 'Deep work' })).toBeHidden();
-    await expect(page.getByRole('textbox', { name: /where you are/i })).toBeVisible();
-
-    await page.reload();
-    await dismissLeaflet(page);
-    await expect(page.getByRole('button', { name: 'AI set' })).toHaveAttribute('aria-pressed', 'true');
-  });
-
-  test('the AI set falls back to the scripted DJ with no key, and says so', async ({ page }) => {
-    await gotoRoute(page, '/dj');
-    await page.getByRole('button', { name: 'AI set' }).click();
-    await page.getByRole('textbox', { name: /where you are/i }).fill('wired from coffee, need to write for an hour');
-    await page.locator('.commit button.primary').click();
-    await expect(page.locator('.badge').filter({ hasText: /^scripted/ }).first()).toBeVisible();
-    await expect(page.locator('.card').first()).toContainText(/Deep Work|Deep work/i);
-  });
-
-  /**
-   * A refusal already given is not worth a request. With the route answering
-   * 429, the set path has to fall back, say when the DJ is back, and then stop
-   * spending an allowance it has been told is empty.
-   */
-  test('a rate limit stops the DJ asking, and says when it is back', async ({ page }) => {
-    await page.route('**/api/dj', (route) =>
-      route.fulfill({
-        status: 429,
-        headers: { 'content-type': 'application/json', 'retry-after': '900' },
-        body: JSON.stringify({ error: 'rate limited', scope: 'device', retryAfter: 900, limit: 60 }),
-      }),
-    );
-    const asks: string[] = [];
-    page.on('request', (r) => {
-      if (r.url().includes('/api/dj')) asks.push(r.url());
-    });
-
-    await gotoRoute(page, '/dj');
-    await page.getByRole('button', { name: 'AI set' }).click();
-    await page.getByRole('textbox', { name: /where you are/i }).fill('wired from coffee, need to write');
-
-    await page.locator('.commit button.primary').click();
-    await expect(page.locator('.badge').filter({ hasText: /this device/ }).first()).toBeVisible();
-    await expect(page.locator('.badge').filter({ hasText: /15 min/ }).first()).toBeVisible();
-    // It still plays: the scripted DJ needs no allowance.
-    expect(await page.evaluate(() => window.adhdmed.engine.snapshot().status)).toBe('playing');
-    expect(asks).toHaveLength(1);
-
-    // And the orb stops claiming to be live while the wait is on.
-    await expect(page.locator('.orb')).not.toHaveClass(/is-live/);
-
-    await page.locator('.commit button.primary').click();
-    await expect(page.locator('.badge').filter({ hasText: /back in/ }).first()).toBeVisible();
-    expect(asks, 'a second tap must not spend a request').toHaveLength(1);
-  });
-
-  test('a colour is an input on its own, and shows its arithmetic', async ({ page }) => {
-    await gotoRoute(page, '/dj');
-    await page.getByRole('button', { name: 'AI set' }).click();
     await page.getByRole('button', { name: 'violet' }).click();
 
     // Light is a frequency; the only step taken is halving it into hearing.
     await expect(page.locator('.block').filter({ hasText: 'COLOUR' })).toContainText(/violet · 4\d\d nm · 1\d\d\.\d\d Hz/);
+    // and it joins the line the button plays
+    await expect(page.locator('.commit button.primary')).toContainText('violet');
 
     await page.locator('.commit button.primary').click();
-    // The set path asks the hosted route first, so the fallback lands after a
-    // round trip. Wait for the card rather than racing it.
     await expect(page.locator('.card').first()).toBeVisible();
     const carrier = await page.evaluate(() => {
       const script = window.adhdmed.engine.snapshot().script!;
@@ -269,16 +206,27 @@ test.describe('the app works on a phone', () => {
     expect(carrier).toBeLessThan(200);
   });
 
-  test('the orb says whether a model will answer', async ({ page }) => {
+  test('there is nothing to configure and nothing to reach', async ({ page }) => {
     await gotoRoute(page, '/dj');
-    const orb = page.locator('.orb');
-    await expect(orb).toBeVisible();
-    await expect(orb.locator('canvas')).toBeVisible();
-    // On a preview build there is no hosted route, so the dot is dark until a
-    // key or a deployment provides one.
-    await expect(orb).toHaveAttribute('aria-label', /AI ·|scripted/);
-    await orb.click();
-    await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible();
+    // No key, no model, no service: the choices are the whole interface.
+    await expect(page.locator('.view')).not.toContainText(/\bAI\b/);
+    await expect(page.locator('.orb')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Settings' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Settings' });
+    await expect(sheet).toBeVisible();
+    await expect(sheet).not.toContainText(/\bAI\b/i);
+    await expect(sheet).not.toContainText(/OpenRouter|proxy/i);
+
+    // And the app asks the network for nothing at all while a session plays.
+    await page.keyboard.press('Escape');
+    const calls: string[] = [];
+    page.on('request', (r) => {
+      if (r.url().includes('/api/') || r.url().includes('openrouter')) calls.push(r.url());
+    });
+    await page.locator('.commit button.primary').click();
+    await expect(page.locator('.card').first()).toBeVisible();
+    expect(calls).toEqual([]);
   });
 
   test('the codex is a scannable list, with the arithmetic one tap in', async ({ page }) => {

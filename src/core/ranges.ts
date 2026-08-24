@@ -8,7 +8,7 @@
  *            gain cap in audio/engine.ts) is NOT part of this envelope and is
  *            never relaxed.
  *
- * This is also the trust boundary: shared links and AI output are strangers.
+ * This is also the trust boundary: a shared link is a stranger.
  */
 import {
   DEFAULT_LAYER,
@@ -133,7 +133,7 @@ const LFO_WAVES = ['sine', 'triangle', 'square', 'sawtooth'] as const;
 const FILTERS = ['lowpass', 'highpass', 'bandpass', 'notch', 'peaking'] as const;
 const CURVES = ['lin', 'exp', 'sine', 'step'] as const;
 const TARGETS = Object.keys(MOD_RANGE) as ModTarget[];
-const ORIGINS = ['dj', 'dj-ai', 'lab', 'codex', 'logos', 'link', 'preset'] as const;
+const ORIGINS = ['dj', 'lab', 'codex', 'logos', 'link', 'preset'] as const;
 
 /** Expressions are parsed by core/expr.ts, but cap the length here. */
 const MAX_EXPR = 240;

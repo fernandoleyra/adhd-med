@@ -1,7 +1,7 @@
 /**
  * The SessionScript: the one contract every mode in ADHD MED compiles down to.
  * DJ, Lab, Codex and Logos all emit this; the audio engine, the visuals, the
- * share-link codec and the AI adapter all consume it.
+ * share-link codec and the visuals all consume it.
  */
 
 export const SCHEMA_VERSION = 2;
@@ -118,7 +118,7 @@ export interface Script {
   unsafe?: boolean;
   seed?: number;
   /** provenance: which mode built this */
-  origin?: 'dj' | 'dj-ai' | 'lab' | 'codex' | 'logos' | 'link' | 'preset';
+  origin?: 'dj' | 'lab' | 'codex' | 'logos' | 'link' | 'preset';
   segments: Segment[];
 }
 

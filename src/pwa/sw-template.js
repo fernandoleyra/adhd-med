@@ -62,7 +62,7 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
-  // The AI adapter talks to the network or not at all — never serve it stale.
+  // Someone else's origin is not ours to cache.
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === 'navigate') {
