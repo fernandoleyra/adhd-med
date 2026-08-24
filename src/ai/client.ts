@@ -19,6 +19,16 @@ const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 const TIMEOUT_MS = 45_000;
 
 /**
+ * A rate limit worth waiting out, in seconds.
+ *
+ * A free endpoint under load answers "come back in five seconds", and the right
+ * response to that is to come back in five seconds — not to hand over a
+ * scripted session and call it a limit. Anything longer than a short pause is a
+ * real wall and gets the cooldown instead. Well inside TIMEOUT_MS either way.
+ */
+const RETRY_WAIT_MAX = 12;
+
+/**
  * The deployment's own route, relative to wherever the app is mounted: one
  * build works both on a host that has the function and on a static host that
  * does not.
@@ -91,6 +101,8 @@ export interface AiRequest {
   /** a carrier the listener chose, and how they arrived at it */
   root?: number;
   rootFrom?: string;
+  /** called when the DJ is waiting out a short rate limit, so the UI can say so */
+  onwait?: (seconds: number) => void;
 }
 
 interface AiSegment {
@@ -287,6 +299,8 @@ function readWait(res: Response): number {
   return 0;
 }
 
+const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
+
 async function post(url: string, headers: Record<string, string>, body: unknown): Promise<Reply> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -382,10 +396,20 @@ export async function requestSession(req: AiRequest): Promise<Script> {
   }
 
   if (response.remaining !== null) remaining = response.remaining;
+
+  // A short hint is a queue, not a wall: wait it out once and ask again, which
+  // is what the listener wanted when they pressed the button.
+  if (response.status === 429 && response.retryAfter > 0 && response.retryAfter <= RETRY_WAIT_MAX) {
+    req.onwait?.(response.retryAfter);
+    await sleep((response.retryAfter + 0.5) * 1000);
+    response = await post(url, headers, { ...base, response_format: schemaMode.get(req.model) === 'object' ? object : schema });
+    if (response.remaining !== null) remaining = response.remaining;
+  }
+
   if (response.status === 429) {
-    // A limit with no stated end still deserves a pause, or the next tap spends
-    // another request on the same refusal. A minute is short enough to be
-    // wrong about and long enough to matter.
+    // Still no, or too long to wait for. Stop asking until it lifts — a limit
+    // with no stated end still deserves a pause, or the next tap spends another
+    // request on the same refusal.
     coolUntil = Date.now() + (response.retryAfter > 0 ? response.retryAfter : 60) * 1000;
   }
   // A static host has no function behind that path. Stop asking, and let the

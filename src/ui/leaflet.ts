@@ -1,14 +1,16 @@
 /**
  * The package insert.
  *
- * Short by default, because a wall of text on first open is a wall. The
- * essential claims are always visible; the rest is one tap away and stays
- * available from the footer forever.
+ * Short by default, because a wall of text on first open is a wall: the facts
+ * table opens it, and the reading is one tap away and stays available from the
+ * footer forever.
+ *
+ * The disclaimer closes the long version rather than opening the sheet. The app
+ * never claims to be medicine anywhere — the name is the whole joke — so
+ * disclaiming it twice over and in advance was louder than the claim.
  */
 import { store } from '../store.js';
 import { el, openSheet } from './dom.js';
-
-export const DISCLAIMER_SHORT = 'Not a medical device. Not a treatment. Evidence is mixed. Keep it quiet, not while driving.';
 
 const LONG = [
   ['What it does', 'Two tones a few hertz apart, one per ear, make a beat that exists in your hearing rather than in the air. A 2019 meta-analysis of 22 studies found a medium overall effect, strongest for anxiety with slow beats, and better results when the sound starts before the task. Every session here opens with a ramp for that reason.'],
@@ -17,14 +19,11 @@ const LONG = [
   ['Warnings', 'Not while driving. Visuals never flicker faster than 2 Hz, but you know your triggers better than a stylesheet does. Stop if you feel unwell. Loud sound damages hearing permanently.'],
   ['Storage', 'Nothing leaves this device. No account, no analytics, no server. Sessions travel as links.'],
   ['Tiers', 'The Codex labels every number: measured, protocol, or lore. The lore — planetary tones, solfeggio, 432 Hz — is kept because it is lovely and labelled because pretending it is science would be worse.'],
+  ['Not a medical device', 'Not a treatment for ADHD or anything else. The evidence is mixed: calming is plausible, attention gains are unproven. Not while driving. If you are struggling, talk to a professional — real treatment works.'],
 ];
 
 function insert(): HTMLElement {
   return el('div', { class: 'leaflet' }, [
-    el('p', { class: 'insert-lede' }, [
-      el('strong', { text: 'Not a medical device.' }),
-      ' Not a treatment for ADHD or anything else. The name is a joke told with a straight face; the sound and the arithmetic are real.',
-    ]),
     el('dl', { class: 'facts' }, [
       el('dt', { text: 'Active' }),
       el('dd', { text: 'sine waves 40–1200 Hz · a difference of 0.5–40 Hz between your ears · optional noise' }),

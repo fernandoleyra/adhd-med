@@ -114,8 +114,10 @@ describe('a rate-limited DJ', () => {
   });
 
   it('tries again once the wait is over', async () => {
+    // A long wait, so the automatic retry stays out of it: this is about the
+    // cooldown expiring, not about waiting out a queue.
     const sent = stub([
-      { status: 429, body: { error: 'rate limited', scope: 'device', retryAfter: 2 }, headers: { 'retry-after': '2' } },
+      { status: 429, body: { error: 'rate limited', scope: 'device', retryAfter: 900 }, headers: { 'retry-after': '900' } },
       { status: 200 },
     ]);
     await ask().catch(() => undefined);
@@ -124,12 +126,58 @@ describe('a rate-limited DJ', () => {
     // Stay on the faked clock for the retry: dropping back to real time would
     // put us before the cooldown again, which is what this asserts is over.
     vi.useFakeTimers();
-    vi.setSystemTime(Date.now() + 3000);
+    vi.setSystemTime(Date.now() + 901_000);
     expect(client.djCooldown()).toBe(0);
 
     const script = await ask();
     expect(sent).toHaveLength(2);
     expect(script.title).toBe('Test Set');
+  });
+
+  // A busy free endpoint says "five seconds", and five seconds is not a wall.
+  it('waits out a short hint and gets the set anyway', async () => {
+    const waits: number[] = [];
+    const sent = stub([
+      { status: 429, body: { error: { code: 429, message: 'Rate limit exceeded' } }, headers: { 'retry-after': '5' } },
+      { status: 200 },
+    ]);
+    vi.useFakeTimers();
+    const pending = client.requestSession({
+      text: 'need to write for an hour',
+      minutes: 25,
+      headphones: true,
+      apiKey: '',
+      model: 'z-ai/glm-5.2:free',
+      onwait: (n) => waits.push(n),
+    });
+    await vi.advanceTimersByTimeAsync(6000);
+    const script = await pending;
+
+    expect(script.title).toBe('Test Set');
+    expect(sent).toHaveLength(2);
+    expect(waits).toEqual([5]);
+    // Nothing to cool down from: the DJ answered.
+    expect(client.djCooldown()).toBe(0);
+  });
+
+  it('does not wait out a long one', async () => {
+    const sent = stub([{ status: 429, body: { error: { code: 429, message: 'Rate limit exceeded' } }, headers: { 'retry-after': '900' } }]);
+    const err = (await ask().catch((e) => e)) as InstanceType<Client['AiError']>;
+    expect(err.kind).toBe('rate');
+    expect(sent, 'nine hundred seconds is a wall, not a queue').toHaveLength(1);
+    expect(client.djCooldown()).toBeGreaterThan(800);
+  });
+
+  it('gives up if the wait did not help', async () => {
+    const sent = stub([{ status: 429, body: { error: { code: 429, message: 'Rate limit exceeded' } }, headers: { 'retry-after': '3' } }]);
+    vi.useFakeTimers();
+    const pending = ask().catch((e) => e);
+    await vi.advanceTimersByTimeAsync(4000);
+    const err = (await pending) as InstanceType<Client['AiError']>;
+
+    expect(err.kind).toBe('rate');
+    expect(sent, 'one retry, not a loop').toHaveLength(2);
+    expect(client.djCooldown()).toBeGreaterThan(0);
   });
 
   it('remembers what the account has left', async () => {
