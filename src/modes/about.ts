@@ -58,7 +58,7 @@ export function renderAbout(host: HTMLElement): void {
           el('li', { text: 'nothing flickers faster than 2 Hz' }),
           el('li', { text: 'a limiter sits after your volume, in every mode' }),
           el('li', { text: 'every number carries a tier: measured, protocol, lore' }),
-          el('li', { text: 'the AI is optional; the scripted DJ needs no network' }),
+          el('li', { text: 'every session is arithmetic this device does itself' }),
         ]),
       ]),
 

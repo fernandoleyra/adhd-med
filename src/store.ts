@@ -1,7 +1,7 @@
 /**
- * All persistent state, which is deliberately very little: preferences, saved
- * sessions, and an API key if the user chose to add one. It lives in this
- * browser only — there is no server to send it to.
+ * All persistent state, which is deliberately very little: preferences and
+ * saved sessions. It lives in this browser only — there is nowhere else for it
+ * to go.
  */
 import type { Method } from './core/types.js';
 
@@ -14,12 +14,7 @@ export interface Settings {
   seenLeaflet: boolean;
   /** the user has opted into the open envelope at least once */
   experimental: boolean;
-  apiKey: string;
-  model: string;
-  proxyUrl: string;
   wakeLock: boolean;
-  /** which of the DJ's two paths you were last on */
-  djPath: 'quick' | 'set';
 }
 
 export interface SavedSession {
@@ -36,18 +31,6 @@ export interface State {
 
 const KEY = 'adhdmed.v1';
 
-/**
- * Free models only. This app is free, so its DJ is too — and every id here can
- * return a schema-checked answer, which most free models cannot. The field
- * takes any typed id, but the hosted route refuses one that costs money.
- */
-export const MODELS = [
-  { id: 'z-ai/glm-5.2:free', label: 'GLM', note: 'holds the schema' },
-  { id: 'nvidia/nemotron-3-super-120b-a12b:free', label: 'Super', note: '120B, best sets' },
-  { id: 'nvidia/nemotron-nano-9b-v2:free', label: 'Nano', note: '9B, quickest' },
-  { id: 'openrouter/free', label: 'Auto', note: 'whichever is up' },
-];
-
 const DEFAULTS: State = {
   settings: {
     theme: 'system',
@@ -56,11 +39,7 @@ const DEFAULTS: State = {
     headphones: true,
     seenLeaflet: false,
     experimental: false,
-    apiKey: '',
-    model: 'z-ai/glm-5.2:free',
-    proxyUrl: '',
     wakeLock: false,
-    djPath: 'quick',
   },
   saved: [],
 };

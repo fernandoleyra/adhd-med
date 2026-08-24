@@ -3,9 +3,8 @@
  *
  * Not a toggle that pretends: it opens the real Cache Storage, compares it
  * against the manifest the build emitted, and tells you file by file whether
- * this app will work with the radio off. Synthesis is local anyway — the only
- * thing that needs the network is the AI DJ, which falls back to the scripted
- * generator without being asked.
+ * this app will work with the radio off. Every tone is synthesised here, so
+ * once these files are cached the radio has nothing left to do.
  */
 import { engine } from '../audio/engine.js';
 import { el, openSheet, toast } from '../ui/dom.js';
@@ -195,7 +194,7 @@ export async function openAirplane(): Promise<void> {
         r.missing.length > 6 ? el('li', { text: `…and ${r.missing.length - 6} more` }) : null,
       ]),
       el('p', { class: 'field-hint' }, [
-        'The AI DJ needs the network; the scripted DJ does not, and it uses the same session grammar. Offline, the DJ switches to it automatically.',
+        'Nothing here needs the network once these files are cached: every tone is computed in this browser.',
       ]),
       el('div', { class: 'row', style: { marginTop: 'var(--s4)' } }, [
         el('button', {

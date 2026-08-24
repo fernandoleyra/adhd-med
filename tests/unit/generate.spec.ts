@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ARCS, DURATIONS, generate, GOALS, inferTags, MOODS, PRESETS, preset, surprise } from '../../src/core/generate.js';
+import { ARCS, DURATIONS, generate, GOALS, MOODS, PRESETS, preset, surprise } from '../../src/core/generate.js';
 import { cleanScript } from '../../src/core/ranges.js';
 import { bandOf } from '../../src/core/octave.js';
 import { totalSeconds } from '../../src/core/types.js';
@@ -110,18 +110,6 @@ describe('scripted DJ', () => {
     }
   });
 
-  it('reads free text onto tags', () => {
-    expect(inferTags('I need to sleep, my brain will not stop').goal).toBe('sleep');
-    expect(inferTags('anxious and wired before a meeting').goal).toBe('calm');
-    expect(inferTags('deep work on the thesis for 90 minutes').goal).toBe('deep');
-    expect(inferTags('deep work on the thesis for 90 minutes').minutes).toBe(90);
-    expect(inferTags('revising for an exam').goal).toBe('study');
-    expect(inferTags('foggy, need to read a paper').goal).toBe('read');
-    expect(inferTags('foggy, need to read a paper').moods).toContain('foggy');
-    expect(inferTags('pomodoro please').minutes).toBe(25);
-    expect(inferTags('give me 2 hours').minutes).toBe(120);
-    expect(inferTags('').goal).toBe('focus');
-  });
 
   it('ships a preset for every named card', () => {
     for (const p of PRESETS) {

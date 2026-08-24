@@ -33,7 +33,7 @@ test.describe('airplane mode', () => {
 
     // The whole app is here: modes render and a session still plays, because
     // every tone is synthesised locally.
-    await expect(page.getByRole('heading', { name: 'DJ' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Goal' }).first()).toBeVisible();
     await page.goto('./#/codex');
     await expect(page.locator('.codex-row').first()).toBeVisible();
 
@@ -63,19 +63,6 @@ test.describe('airplane mode', () => {
     );
   });
 
-  test('the DJ says it is offline rather than failing', async ({ page, context }) => {
-    await page.goto('./');
-    await dismissLeaflet(page);
-    expect(await serviceWorkerReady(page)).toBe(true);
-    await context.setOffline(true);
-    await page.goto('./#/dj');
-    await dismissLeaflet(page);
-    await page.getByRole('button', { name: 'AI set' }).click();
-    await page.getByRole('textbox', { name: /where you are/i }).fill('cannot settle, need to read');
-    await page.locator('.commit button.primary').click();
-    await expect(page.locator('.badge').filter({ hasText: /offline/ }).first()).toBeVisible();
-    await context.setOffline(false);
-  });
 });
 
 test.describe('updating', () => {
@@ -99,13 +86,13 @@ test.describe('updating', () => {
     const update = page.locator('#update');
     await expect(update.getByRole('button', { name: 'Restart' })).toBeVisible();
 
-    // The real toast from the real path: with no hosted route on a preview
-    // build, asking for a set warns and falls back. This is the exact message
-    // that used to arrive and take the Restart button with it.
-    await page.getByRole('button', { name: 'AI set' }).click();
-    await page.getByRole('textbox', { name: /where you are/i }).fill('wired, need to write');
-    await page.locator('.commit button.primary').click();
-    await expect(page.locator('#toast')).toContainText('scripted DJ instead');
+    // A real toast from a real path, which is the whole point: the update offer
+    // used to be the #toast element, so the next message overwrote it.
+    await page.getByRole('button', { name: 'Airplane mode' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Airplane mode' });
+    await sheet.getByRole('button', { name: 'Cache everything now' }).click();
+    await expect(page.locator('#toast')).toContainText(/Re-checked|Installing/);
+    await page.keyboard.press('Escape');
 
     await expect(update, 'the offer outlives the message').toBeVisible();
     await expect(update.getByRole('button', { name: 'Restart' })).toBeVisible();

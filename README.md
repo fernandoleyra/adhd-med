@@ -19,7 +19,7 @@ synthesised in your browser from numbers you can inspect.
 
 | | | |
 |---|---|---|
-| **DJ** | Two paths. **Quick**: goal, feel, time, and one action at the end of them that plays exactly what it says — no network, no key. **AI set**: say where you are, out loud or as a colour, and a model plans a session that actually moves. Without a key the same request goes to the scripted arcs, and the card says so. | `#/dj` |
+| **DJ** | Goal, feel, time, optionally a colour, and one action at the end of those choices that plays exactly what it says. Nothing to configure and nothing to reach: the arcs are computed here. | `#/dj` |
 | **Lab** | The whole synthesiser: layers, waveforms drawn as harmonic bars, AM/FM modulators, filters, ratio stacks, equations over time, seeded randomness, and an experimental envelope for sounds nobody has tested. | `#/lab` |
 | **Codex** | ~40 numbers from physics, astronomy, protocol and folklore, each with the exact arithmetic that makes it audible and a label saying how much weight it can bear. | `#/codex` |
 | **Logos** | Words into frequencies. Letters become numbers, numbers become pitch, and the derivation stays on screen. | `#/logos` |
@@ -93,9 +93,8 @@ npm run e2e        # end-to-end tests (Playwright, builds first)
 npm run check      # typecheck + unit + build + relative-output check + budget
 ```
 
-Bundle budget, enforced in CI: **≤100 kB gzipped**. Current build is ~59 kB for
-the whole app, including the AI adapter — no runtime dependencies, system fonts
-only.
+Bundle budget, enforced in CI: **≤100 kB gzipped**. Current build is ~57 kB for
+the whole app — no runtime dependencies, no services, system fonts only.
 
 ### Deploy
 
@@ -107,81 +106,6 @@ same build boots at a domain root, at a project subpath, or off a file server �
 The live copy is on Vercel: `vercel.json` sets the build command, keeps `sw.js`
 and `precache.json` uncacheable so a new deploy can always replace the old
 worker, and marks the hashed assets immutable. Pushing to `main` deploys.
-
-To host the AI DJ for everyone, three environment variables, all read by
-`api/dj.ts`:
-
-| | |
-|---|---|
-| `OPENROUTER_API_KEY` | required. Without it the route answers 501 and the app quietly uses the scripted DJ. |
-| `DJ_MODEL` | pins one model, in OpenRouter's `vendor/model` naming (e.g. `z-ai/glm-5.2:free`). Whatever a visitor's browser asks for, this answers — the deployment carries the account, so the deployment chooses. |
-| `DJ_MODELS` | comma-separated allow-list a visitor may pick from, replacing the built-in defaults. Ignored when `DJ_MODEL` is set. |
-| `DJ_RATE_LIMIT` | requests per hour per address, default 60. A brake on a runaway loop, not a spend guard. |
-| `DJ_ALLOW_PAID` | set to `1` to permit a model that costs money. Without it the route refuses any id that is not `openrouter/free` or `…:free`, so a typo cannot start billing. |
-
-**The route finishes in 22 seconds or explains itself.** Vercel gives an Edge
-function 25 seconds to begin responding and then kills it with an HTML error
-page, which an app can only report as a shrug. Each upstream attempt carries a
-deadline, the busy-model fall-through only starts with real budget left, and a
-timeout comes back as JSON — so the DJ can say "the model took too long" and
-point at a quicker one. `nvidia/nemotron-nano-9b-v2:free` is the quickest of the
-free models that can hold a schema.
-
-**Free models only, by default.** The route checks it rather than trusting the
-list, because a list drifts and a typo in `DJ_MODEL` would be a bill.
-
-**A busy model falls through to the next one.** OpenRouter answers 429 with a
-`Retry-After` when every provider it tried for a model returned a retry hint —
-the pool is busy, and asking the same one again a few seconds later is a coin
-flip. The route immediately tries the next model it allows instead, which has a
-different pool and costs no wait. Two models at most; the reply says which one
-answered, and the DJ badge shows it.
-
-Picking one: of OpenRouter's ~22 free models only six can return a strict JSON
-schema, which this app needs. `z-ai/glm-5.2:free` and
-`nvidia/nemotron-3-super-120b-a12b:free` both can, and both are large enough to
-follow the band rules; `openrouter/free` routes to whatever is up, so its
-sessions vary in style. Free models are all reasoning models, and OpenRouter
-spends reasoning tokens out of `max_tokens` — which is why the DJ asks for 4000
-of them and sends `reasoning: {effort: 'low'}`.
-
-**The allowance is the thing to know about.** Free models are capped at 20
-requests a minute and **50 a day** until an account has bought 10 credits
-all-time, which raises it to 1000 a day. The app is built for that: one request
-per session (it remembers which models refuse a JSON schema rather than retrying
-every time), and when a limit does land it says whose limit it was and when it
-lifts, then stops asking until then. A rate-limited DJ falls back to the
-scripted arcs, which need no allowance at all.
-
-Worth knowing before you pick: OpenRouter's own **allowed providers** and **data
-policy** settings can refuse every model here. A narrowed provider list rules
-out models those providers don't serve, and the `:free` endpoints generally
-require prompt logging to be enabled. The app says "OpenRouter settings block
-that model" rather than pretending there is no DJ, and the DJ badge names
-whichever model actually answered.
-
-## The AI DJ is optional
-
-The field works without a key: your text is read by keyword and handed to the
-scripted generator. There are three ways a model can answer instead, in the
-order the app prefers them:
-
-- **the deployment's own route.** `api/dj.ts` is one small Edge Function holding
-  the key server-side; on a deployment that has it, visitors need nothing at
-  all. It forwards a short allow-list of models, caps body size and tokens, and
-  rate-limits per IP. On a host without it the first request 404s once and the
-  app falls back for the rest of the session.
-- **your own [OpenRouter](https://openrouter.ai/keys) key**, pasted into
-  Settings → **AI DJ**. It stays in this browser and requests go straight to
-  OpenRouter — no server in the middle, and any of OpenRouter's model ids works.
-  The default `openrouter/free` costs nothing.
-- **a proxy of your own.** `extras/proxy-worker/` is about forty lines of
-  Cloudflare Worker for forks on a static host; its URL in the proxy field
-  overrides both of the above.
-
-Either way the model only chooses the *shape*. Its answer comes back as strict
-JSON, is validated and clamped by the same code as everything else, and the
-physics is not up for negotiation.
 
 ## The look
 

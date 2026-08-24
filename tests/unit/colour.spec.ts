@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { C_LIGHT, colourName, hueWavelength, PALETTE_HUES, readColour } from '../../src/core/colour.js';
+import { generate } from '../../src/core/generate.js';
 import { CARRIER_HI, CARRIER_LO } from '../../src/core/octave.js';
 
 /**
@@ -57,5 +58,30 @@ describe('colour as a frequency', () => {
       expect(hz).toBeGreaterThan(100);
       expect(hz).toBeLessThan(500);
     }
+  });
+});
+
+/**
+ * A colour is an input to a session, not a mood board: it moves the carrier and
+ * leaves the arc alone, because the arc is the half with evidence behind it.
+ */
+describe('a colour retunes an arc without reshaping it', () => {
+  const plain = generate({ goal: 'focus', minutes: 25, seed: 7 });
+  const violet = readColour(262).folded.hz;
+  const tuned = generate({ goal: 'focus', minutes: 25, seed: 7, root: violet });
+
+  it('keeps the arc: same segments, same beats', () => {
+    expect(tuned.segments).toHaveLength(plain.segments.length);
+    expect(tuned.segments.map((s) => s.layers[0]!.beat)).toEqual(plain.segments.map((s) => s.layers[0]!.beat));
+  });
+
+  it('moves every carrier by the same ratio', () => {
+    const ratios = tuned.segments.map((s, i) => s.layers[0]!.carrier / plain.segments[i]!.layers[0]!.carrier);
+    for (const r of ratios) expect(r).toBeCloseTo(violet / 220, 2);
+  });
+
+  it('ignores a root that is not a frequency', () => {
+    const nonsense = generate({ goal: 'focus', minutes: 25, seed: 7, root: 0 });
+    expect(nonsense.segments[0]!.layers[0]!.carrier).toBe(plain.segments[0]!.layers[0]!.carrier);
   });
 });
